@@ -26,7 +26,7 @@
 (define (http-get-gzip server request-uri . args)
   (call-with-process-io
    ;; why 'cat'? I dunno.
-   "tee hoga | zcat -"
+   "cat | zcat -"
    (lambda (in out)
      (let ((sink    (get-keyword :sink    args (open-output-string)))
            (flusher (get-keyword :flusher args (lambda (x _) (get-output-string x)))))

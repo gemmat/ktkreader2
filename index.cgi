@@ -16,12 +16,12 @@
 (use lib.db)
 
 (define (get-2ch-subject 板URL)
-  (let* ((p (db-select-板最終更新日時&板etag 板URL))
-         (板最終更新日時 (car p))
-         (板etag       (cdr p)))
-    (receive (status header body)
-        (receive (_ _ host _ path _ _) (uri-parse 板URL)
-          (let1 out (open-output-string)
+  (receive (status header body)
+      (receive (_ _ host _ path _ _) (uri-parse 板URL)
+        (let1 out (open-output-string)
+          (let* ((p (db-select-板最終更新日時&板etag 板URL))
+                 (板最終更新日時 (and p (car p)))
+                 (板etag       (and p (cdr p))))
             (http-get-gzip host
                            (build-path path "subject.txt")
                            :user-agent "Monazilla/1.00"
@@ -32,22 +32,23 @@
                            :flusher (lambda (sink _)
                                       (begin0
                                         (string-split (get-output-string out) "\n")
-                                        (close-output-port sink))))))
-      (print "status:: " status "\n header:: " header "\n")
-      (cond
-       ((string=? status "200")
-        (db-insert-板 板URL) ;;optimistic insertion
-        (and-let* ((板id (db-select-板id 板URL)))
-          (db-update-板最終更新日時&板etag 板id (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-          (db-insert-update-スレs-from-subject-text body 板id 板URL)))))))
+                                        (close-output-port sink)))))))
+    (print "status:: " status "\n header:: " header "\n")
+    (cond
+     ((string=? status "200")
+      (db-insert-板 板URL) ;;optimistic insertion
+      (and-let* ((板id (db-select-板id 板URL)))
+        (db-update-板最終更新日時&板etag 板id (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
+        (db-insert-update-スレs-from-subject-text body 板id 板URL))))))
 
 (define (get-2ch-dat-full スレURL)
   (receive (板URL スレキー) (decompose-スレURL スレURL)
     (and 板URL
          スレキー
-         (let1 スレファイル (build-path (current-directory) "tmp" スレキー)
+         (and-let* ((unique-id (+ 100000000 (db-select-count-スレ)))
+                    (一時スレファイル (build-path (current-directory) "tmp" (path-swap-extension (x->string unique-id) "dat"))))
            (receive (status header body)
-               (call-with-output-file スレファイル
+               (call-with-output-file 一時スレファイル
                  (lambda (out)
                    (receive (_ _ host _ path _ _) (uri-parse スレURL)
                      (http-get-gzip host
@@ -60,10 +61,13 @@
               ((string=? status "200")
                (and-let* ((板id (db-select-板id 板URL)))
                  (db-insert-スレ 板id スレURL)
-                 (and-let* ((スレid (db-select-スレid スレURL)))
+                 (and-let* ((スレid (db-select-スレid スレURL))
+                            (スレファイル (build-path (current-directory) "dat" (path-swap-extension (x->string スレid) "dat"))))
+                   (move-file 一時スレファイル スレファイル :if-exists :backup)
                    (db-update-スレファイル スレid スレファイル)
                    (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-                   (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))))))))))
+                   (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))))
+              (else status)))))))
 
 (define (get-2ch-dat-diff スレid スレURL スレファイル)
   (and-let* ((スレファイルのバイト数 (file-size スレファイル))
@@ -105,17 +109,12 @@
 
 (define (get-2ch-bbsmenu)
   (define sxml (bbsmenu-html-http->sxml "http://menu.2ch.net/bbsmenu.html"))
-  (for-each (lambda (x)
-              (and-let* ((板URL ((if-car-sxpath '(@ href *text*)) x))
-                         (板名  ((if-car-sxpath '(*text*)) x)))
-                ;;transaction
-                (print 板URL ":::" 板名)
-                (db-insert-板URL&板名 板URL 板名)))
-            ((sxpath '(category board)) sxml)))
-
-;;(use gauche.reload)
-;;(reload-modified-modules)
-;;(reload 'lib.db)
+  (db-insert-板URL&板名-transaction
+   (filter-map (lambda (x)
+                 (and-let* ((板URL ((if-car-sxpath '(@ href *text*)) x))
+                            (板名  ((if-car-sxpath '(*text*)) x)))
+                   (cons 板URL 板名)))
+               ((sxpath '(category board)) sxml))))
 
 ;;(drop-table-bbsmenu)
 ;;(create-table-bbsmenu)
@@ -124,17 +123,16 @@
 ;;(create-table-subject)
 
 ;;(get-2ch-bbsmenu)
+
 ;;(get-2ch-dat-full "http://pc12.2ch.net/sns/dat/1260300967.dat")
 ;;(get-2ch-dat "http://pc12.2ch.net/sns/dat/1260300967.dat")
-;;(get-2ch-dat-full "http://localhost/" "a.dat")
-;;(get-2ch-dat-full "http://namidame.2ch.net/venture/" "1262292574.dat")
-;;(get-2ch-subject "http://localhost/")
+;;(get-2ch-dat-full "http://namidame.2ch.net/venture/1262292574.dat")
+;;(get-2ch-subject "http://gimpo.2ch.net/namazuplus/")
 ;;(get-2ch-subject "http://pc12.2ch.net/sns/")
-;;(db-insert-update-スレs-from-subject-text `("9241002010.dat<>ほげほげ  (4)") 1 "http://pc12.2ch.net/sns/")
+
 ;;(use gauche.reload)
 ;;(reload-modified-modules)
-;;(define l (call-with-input-file "./t" port->string-list :encoding 'SHIFT_JIS))
-;;(define y (db-insert-update-スレs-from-subject-text l 1 "http://pc12.2ch.net/sns/"))
+;;(reload 'lib.db)
 
 ;; Local variables:
 ;; mode: inferior-gauche

@@ -3,6 +3,7 @@
   (use sqlite3)
   (use gauche.collection)
   (use util.relation)
+  (use gauche.mop.singleton)
   (use lib.util)
   (export call-with-ktkr2-sqlite
           call-with-ktkr2-sqlite-transaction
@@ -13,6 +14,7 @@
           db-select-板id
           db-insert-板
           db-insert-板URL&板名
+          db-insert-板URL&板名-transaction
           db-update-板最終更新日時&板etag
           drop-table-subject
           db-insert-スレ
@@ -23,6 +25,7 @@
           db-select-スレid
           db-select-スレid-スレファイル-is-not-null
           db-select-スレ最終更新日時&スレetag
+          db-select-count-スレ
           test
           )
   )
@@ -37,9 +40,9 @@
              (condition-ref e 'message))
             (else (raise e)))
     (let1 conn (dbi-connect "dbi:sqlite3:/home/teruaki/ktkreader2/ktkr2.sqlite")
-      (begin0
-        (proc conn)
-        (dbi-close conn)))))
+      (unwind-protect
+       (proc conn)
+       (dbi-close conn)))))
 
 (define (call-with-ktkr2-sqlite-transaction proc)
   (call-with-ktkr2-sqlite
@@ -118,6 +121,21 @@
             (result (dbi-execute query 板URL 板名)))
          result))))
 
+(define (db-insert-板URL&板名-transaction l)
+  (call-with-ktkr2-sqlite-transaction
+   (lambda (conn)
+     (let1 query (dbi-prepare conn "INSERT INTO bbsmenu (板URL, 板名) VALUES (?, ?)")
+       (for-each (lambda (x)
+                   (let ((板URL (car x))
+                         (板名  (cdr x)))
+                     ;;optimistic insertion. A constraint error is admittable.
+                     (guard (e ((<sqlite3-error> e)
+                                (unless (eq? (condition-ref e 'error-code) SQLITE_CONSTRAINT)
+                                  (raise e)))
+                               (else (raise e)))
+                           (dbi-execute query 板URL 板名))))
+               l)))))
+
 (define (db-update-板最終更新日時&板etag 板id 板最終更新日時 板etag)
   (when (and 板id (or 板最終更新日時 板etag))
     (call-with-ktkr2-sqlite
@@ -153,24 +171,21 @@
 (define (db-insert-update-スレs-from-subject-text body 板id 板URL)
   (call-with-ktkr2-sqlite-transaction
    (lambda (conn)
-     (map (lambda (x)
-            (rxmatch-if (#/^(\d+\.dat)\<\>(.+)\s\((\d+)\)$/ x)
-                (#f スレキー スレタイ レス数)
-                (let1 スレURL (compose-スレURL 板URL スレキー)
-                  ;;optimistic insertion. A constraint error is admittable.
-                  (guard (e ((<sqlite3-error> e)
-                             (unless (eq? (condition-ref e 'error-code) SQLITE_CONSTRAINT)
-                               (raise e)))
-                            (else (raise e)))
-                    (let* ((query (dbi-prepare conn "INSERT INTO subject (板id, スレURL) VALUES (?, ?)"))
-                           (result0 (dbi-execute query 板id スレURL)))
-                      result0))
-                  (let* ((query (dbi-prepare conn "UPDATE subject SET スレタイ = ?, レス数 = ? WHERE スレURL = ?"))
-                         (result1 (dbi-execute query スレタイ レス数 スレURL)))
-                    result1)
-                  `(,板id ,スレURL ,スレタイ ,レス数))
-                x))
-          body))))
+     (let* ((query0 (dbi-prepare conn "INSERT INTO subject (板id, スレURL) VALUES (?, ?)"))
+            (query1 (dbi-prepare conn "UPDATE subject SET スレタイ = ?, レス数 = ? WHERE スレURL = ?")))
+       (for-each (lambda (x)
+                   (rxmatch-if (#/^(\d+\.dat)\<\>(.+)\s\((\d+)\)$/ x)
+                       (#f スレキー スレタイ レス数)
+                       (let1 スレURL (compose-スレURL 板URL スレキー)
+                         ;;optimistic insertion. A constraint error is admittable.
+                         (guard (e ((<sqlite3-error> e)
+                                    (unless (eq? (condition-ref e 'error-code) SQLITE_CONSTRAINT)
+                                      (raise e)))
+                                   (else (raise e)))
+                           (dbi-execute query0 板id スレURL))
+                         (dbi-execute query1 スレタイ レス数 スレURL))
+                       #f))
+                 body)))))
 
 (define (db-update-スレファイル スレid スレファイル)
   (call-with-ktkr2-sqlite
@@ -233,6 +248,16 @@
        (acar (map (lambda (row)
                     (cons (getter row "スレ最終更新日時")
                           (getter row "スレetag")))
+                  result))))))
+
+(define (db-select-count-スレ)
+  (call-with-ktkr2-sqlite
+   (lambda (conn)
+     (let* ((query (dbi-prepare conn "SELECT COUNT(id) FROM subject"))
+            (result (dbi-execute query))
+            (getter (relation-accessor result)))
+       (acar (map (lambda (row)
+                    (getter row "COUNT(id)"))
                   result))))))
 
 (define (test n)
