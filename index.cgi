@@ -3,6 +3,7 @@
 (use rfc.http)
 (use rfc.uri)
 (use gauche.process)
+(use gauche.logger)
 (use sxml.sxpath)
 
 ;;(use text.html-lite)
@@ -14,7 +15,10 @@
 (use lib.util)
 (use lib.db)
 
+(log-open "./log/access.log" :prefix "~T:")
+
 (define (get-2ch-subject 板URL)
+  (log-format "get-2ch-subject ~a" 板URL)
   (receive (status header gzip-body)
       (receive (_ _ host _ path _ _) (uri-parse 板URL)
         (let* ((p (db-select-板最終更新日時&板etag 板URL))
@@ -26,21 +30,24 @@
                     :accept-encoding "gzip"
                     :if-modified-since 板最終更新日時
                     :etag              板etag)))
+    (log-format "get-2ch-subject status: ~a header: ~a" status header)
     (cond
      ((string=? status "200")
       (db-insert-板 板URL) ;;楽観的insertion UNIQUE制約エラーは気にしない
       (and-let* ((板id (db-select-板id 板URL)))
         (db-update-板最終更新日時&板etag 板id (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-        (or (and-let* ((c (acadr (assoc "content-encoding" header)))
-                       ((string=? c "gzip"))
-                       (utf8-body (call-with-input-string-gzip gzip-body sjis-port->utf8-string))
-                       (subject   (string-split utf8-body "\n")))
-              (db-insert-update-スレs-from-subject-text subject 板id 板URL)
-              subject)
-            gzip-body)))
-     (else (list status header gzip-body)))))
+        (let* ((utf8-body (if (string=? (acadr (assoc "content-encoding" header)) "gzip")
+                            (call-with-input-string-gzip gzip-body sjis-port->utf8-string)
+                            (call-with-input-string      gzip-body sjis-port->utf8-string)))
+               (subject   (string-split utf8-body "\n")))
+          (db-insert-update-スレs-from-subject-text subject 板id 板URL))
+        (log-format "get-2ch-subject success.")
+        '成功))
+     (else
+      '失敗))))
 
 (define (get-2ch-dat-full スレURL)
+  (log-format "get-2ch-dat-full ~a" スレURL)
   (receive (板URL スレキー) (decompose-スレURL スレURL)
     (and 板URL
          スレキー
@@ -50,26 +57,26 @@
                          path
                          :user-agent "Monazilla/1.00"
                          :accept-encoding "gzip"))
+           (log-format "get-2ch-dat-full status: ~a header: ~a" status header)
            (cond
             ((string=? status "200")
              (and-let* ((板id (db-select-板id 板URL)))
                (db-insert-スレ 板id スレURL)
                (and-let* ((スレid (db-select-スレid スレURL))
                           (スレファイル (build-path (current-directory) "dat" (path-swap-extension (x->string スレid) "dat"))))
-                 (or (and-let* ((c (acadr (assoc "content-encoding" header)))
-                                ((string=? c "gzip")))
-                       (call-with-output-file スレファイル
-                         (lambda (out)
-                           (call-with-input-string-gzip gzip-body (cut copy-port <> out)))))
-                     (call-with-output-file スレファイル
-                       (lambda (out)
-                         (call-with-input-string gzip-body (cut copy-port <> out)))))
+                 (call-with-output-file スレファイル
+                   (lambda (out)
+                     (if (string=? (acadr (assoc "content-encoding" header)) "gzip")
+                       (call-with-input-string-gzip gzip-body (cut copy-port <> out))
+                       (call-with-input-string      gzip-body (cut copy-port <> out)))))
                  (db-update-スレファイル スレid スレファイル)
                  (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-                 (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))))
-            (else status))))))
+                 (log-format "get-2ch-dat-full success.")
+                 '成功)))
+            (else '失敗))))))
 
 (define (get-2ch-dat-diff スレid スレURL スレファイル)
+  (log-format "get-2ch-dat-diff ~a ~a ~a" スレid スレURL スレファイル)
   (and-let* ((スレファイルのバイト数 (file-size スレファイル))
              (スレ差分ファイル (path-swap-extension スレファイル "dat.diff"))
              (p (db-select-スレ最終更新日時&スレetag スレid))
@@ -87,20 +94,31 @@
                         :range (format #f "bytes=~a-" (- スレファイルのバイト数 1))
                         :sink out
                         :flusher (lambda _ #t)))))
+      (log-format "get-2ch-dat-diff status: ~a header: ~a" status header)
       (cond
        ((string=? status "206")
         (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
         ;;rangeで-1した分に\nが入っているかどうか
-        (if (char=? #\newline (call-with-input-process `(head -c 1 ,スレ差分ファイル) read-char :encoding 'SHIFT_JIS))
-            ;;先頭1行に、rangeで-1した分の\nが入っているので消す
-            (call-with-input-process (format #f "sed '1,1d' >> ~a" スレファイル) (lambda _ #t) :input スレ差分ファイル)
-            'あぼーん))
+        (if (char=? #\newline (call-with-input-process `(head -c 1 ,スレ差分ファイル)
+                                read-char :encoding 'SHIFT_JIS))
+          ;;スレ差分ファイルの先頭1行目に、rangeで-1した分の\nが
+          ;;入っているので、消してからスレファイルにappendする
+          (begin
+            (call-with-input-process (format #f "sed '1,1d' >> ~a" スレファイル)
+              (lambda _ #t) :input スレ差分ファイル)
+            (log-format "get-2ch-dat-diff success.")
+            '成功)
+          'あぼーん))
        ((string=? status "304")
         '更新無し)
        ((string=? status "416")
-        'あぼーん)))))
+        'あぼーん)
+       (else
+        (log-format "get-2ch-dat-diff unhandled status: ~a" status)
+        '失敗)))))
 
 (define (get-2ch-dat スレURL)
+  (log-format "get-2ch-dat ~a" スレURL)
   (or (and-let* ((p (db-select-スレid-スレファイル-is-not-null スレURL))
                  (スレid     (car p))
                  (スレファイル (cdr p)))
@@ -109,6 +127,7 @@
 
 (define (get-2ch-bbsmenu)
   (define sxml (bbsmenu-html-http->sxml "http://menu.2ch.net/bbsmenu.html"))
+  (log-format "get-2ch-bbsmenu")
   (db-insert-板URL&板名-transaction
    (filter-map (lambda (x)
                  (and-let* ((板URL ((if-car-sxpath '(@ href *text*)) x))
@@ -116,6 +135,7 @@
                    (cons 板URL 板名)))
                ((sxpath '(category board)) sxml))))
 
+;;(call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)
 ;;(ces-convert (call-with-input-file "/var/www/subject.txt" port->string) 'SHIFT_JIS)
 
 ;;(drop-table-bbsmenu)

@@ -2,6 +2,7 @@
   (use dbi)
   (use sqlite3)
   (use gauche.collection)
+  (use gauche.logger)
   (use util.relation)
   (use lib.util)
   (export call-with-ktkr2-sqlite
@@ -23,7 +24,6 @@
           db-select-スレid
           db-select-スレid-スレファイル-is-not-null
           db-select-スレ最終更新日時&スレetag
-          test
           )
   )
 
@@ -50,6 +50,7 @@
       (dbi-do conn "END TRANSACTION")))))
 
 (define (create-table-bbsmenu)
+  (log-format "create-table-bbsmenu")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "CREATE TABLE IF NOT EXISTS bbsmenu (\
@@ -62,6 +63,7 @@
        result))))
 
 (define (create-table-subject)
+  (log-format "create-table-subject")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "CREATE TABLE IF NOT EXISTS subject (\
@@ -77,6 +79,7 @@
        result))))
 
 (define (drop-table-bbsmenu)
+  (log-format "drop-table-bbsmenu")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "DROP TABLE bbsmenu"))
@@ -84,6 +87,7 @@
        result))))
 
 (define (drop-table-subject)
+  (log-format "drop-table-subject")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "DROP TABLE subject"))
@@ -91,6 +95,7 @@
        result))))
 
 (define (db-select-板最終更新日時&板etag 板URL)
+  (log-format "db-select-板最終更新日時&板etag ~a" 板URL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "SELECT 板最終更新日時, 板etag FROM bbsmenu WHERE 板URL = ?"))
@@ -102,6 +107,7 @@
                   result))))))
 
 (define (db-select-板id 板URL)
+  (log-format "db-select-板id ~a" 板URL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "SELECT id FROM bbsmenu WHERE 板URL = ?"))
@@ -112,6 +118,7 @@
                   result))))))
 
 (define (db-insert-板 板URL)
+  (log-format "db-insert-板 ~a" 板URL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "INSERT INTO bbsmenu (板URL) VALUES (?)"))
@@ -119,6 +126,7 @@
          result))))
 
 (define (db-insert-板URL&板名 板URL 板名)
+  (log-format "db-insert-板URL&板名 ~a ~a" 板URL 板名)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "INSERT INTO bbsmenu (板URL, 板名) VALUES (?, ?)"))
@@ -126,6 +134,7 @@
          result))))
 
 (define (db-insert-板URL&板名-transaction l)
+  (log-format "db-insert-板URL&板名-transaction length: ~a" (length l))
   (call-with-ktkr2-sqlite-transaction
    (lambda (conn)
      (let1 query (dbi-prepare conn "INSERT INTO bbsmenu (板URL, 板名) VALUES (?, ?)")
@@ -141,6 +150,7 @@
                l)))))
 
 (define (db-update-板最終更新日時&板etag 板id 板最終更新日時 板etag)
+  (log-format "db-update-板最終更新日時&板etag ~a ~a ~a" 板id 板最終更新日時 板etag)
   (when (and 板id (or 板最終更新日時 板etag))
     (call-with-ktkr2-sqlite
      (lambda (conn)
@@ -159,6 +169,7 @@
            result)))))))
 
 (define (db-insert-スレ 板id スレURL)
+  (log-format "db-insert-スレ ~a ~a" 板id スレURL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "INSERT INTO subject (板id, スレURL) VALUES (?, ?)"))
@@ -166,6 +177,7 @@
        result))))
 
 (define (db-insert-update-スレs-from-subject-text body 板id 板URL)
+  (log-format "db-insert-update-スレs-from-subject-text length: ~a ~a ~a" (length body) 板id 板URL)
   (call-with-ktkr2-sqlite-transaction
    (lambda (conn)
      (let* ((query0 (dbi-prepare conn "INSERT INTO subject (板id, スレURL) VALUES (?, ?)"))
@@ -185,6 +197,7 @@
                  body)))))
 
 (define (db-update-スレファイル スレid スレファイル)
+  (log-format "db-update-スレファイル ~a ~a" スレid スレファイル)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "UPDATE subject SET スレファイル = ? WHERE id = ?"))
@@ -192,6 +205,7 @@
          result))))
 
 (define (db-update-スレ最終更新日時&スレetag スレid スレ最終更新日時 スレetag)
+  (log-format "db-update-スレ最終更新日時&スレetag ~a ~a ~a" スレid スレ最終更新日時 スレetag)
   (when (and スレid (or スレ最終更新日時 スレetag))
     (call-with-ktkr2-sqlite
      (lambda (conn)
@@ -210,6 +224,7 @@
            result)))))))
 
 (define (db-select-スレid スレURL)
+  (log-format "db-select-スレid ~a" スレURL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "SELECT id FROM subject WHERE スレURL = ?"))
@@ -220,6 +235,7 @@
                   result))))))
 
 (define (db-select-スレid-スレファイル-is-not-null スレURL)
+  (log-format "db-select-スレid-スレファイル-is-not-null ~a" スレURL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "SELECT id, スレファイル FROM subject WHERE スレURL = ? AND スレファイル IS NOT NULL"))
@@ -230,6 +246,7 @@
                   result))))))
 
 (define (db-select-スレ最終更新日時&スレetag スレid)
+  (log-format "db-select-スレ最終更新日時&スレetag ~a" スレid)
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "SELECT スレ最終更新日時, スレetag FROM subject WHERE id = ?"))
@@ -239,43 +256,5 @@
                     (cons (getter row "スレ最終更新日時")
                           (getter row "スレetag")))
                   result))))))
-
-(define (test n)
-  (call-with-ktkr2-sqlite
-   (lambda (conn)
-     (case n
-       ((i0)
-        (let* ((query (dbi-prepare conn "INSERT INTO bbsmenu (板URL, 板名, 板最終更新日時) VALUES ('http://test.2ch.net', 'テスト板', '2009/1/1')"))
-               (result (dbi-execute query)))
-          result))
-       ((i1)
-        (let* ((query (dbi-prepare conn "INSERT INTO subject (板id, スレURL, スレタイ, レス数, スレファイル) VALUES (1, 'http://test.2ch.net/0912312312.dat, 'すごい', 100, '/home/test')"))
-               (result (dbi-execute query)))
-          result))
-       ((i2)
-        (let* ((query (dbi-prepare conn "INSERT INTO bbsmenu (板URL, 板名) VALUES ('http://test2.2ch.net', 'テスト板')"))
-               (result (dbi-execute query)))
-          result))
-       ((s0)
-        (let* ((query (dbi-prepare conn "SELECT 板最終更新日時 FROM bbsmenu"))
-               (result (dbi-execute query))
-               (getter (relation-accessor result)))
-          (map (lambda (row)
-                 (getter row "板最終更新日時"))
-               result)))
-       ((s1)
-        (let* ((query (dbi-prepare conn "SELECT 板id, スレURL, スレタイ, レス数 FROM subject"))
-               (result (dbi-execute query))
-               (getter (relation-accessor result)))
-          (map (lambda (row)
-                 (list (getter row "スレURL")
-                       (getter row "スレタイ")))
-               result)))))))
-
-;;(test 'i0)
-;;(test 'i1)
-;;(test 'i2)
-;;(test 's0)
-;;(test 's1)
 
 (provide "db")

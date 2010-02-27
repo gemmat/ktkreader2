@@ -1,6 +1,7 @@
 (define-module lib.bbsmenu
   (use srfi-1)
   (use gauche.charconv)
+  (use gauche.logger)
   (use rfc.uri)
   (use rfc.http)
   (use sxml.ssax)
@@ -49,13 +50,15 @@
                                (eq? 'board (car x)))
                              (cdr l))
           (loop d (cons (append (car l) t) r))))))
-  
+
   ;; 公式の板一覧には、板以外のリンクもいくつか含まれているので、除外する必要があります。
   ;;
   ;;     * 板の無いカテゴリ
-  ;;       「チャット」「ツール類」「他のサイト」
-  ;;       「運営案内」も、板が含まれているものの、他のカテゴリにも配置されている板しかないので、除外しても構いません。
-  ;;       「特別企画」は、現在は板は含まれていないものの、板のように読み込めるページもあり、また、過去には通常の板が普通に置かれており、これからもその可能性が無いとは言えないので、除外しない方が良いかもしれません。
+  ;;       「チャット」「ツール類」「他のサイト」「運営案内」も、板が含まれているものの、
+  ;;       他のカテゴリにも配置されている板しかないので、除外しても構いません。
+  ;;       「特別企画」は、現在は板は含まれていないものの、板のように読み込めるページもあり、
+  ;;       また、過去には通常の板が普通に置かれており、これからもその可能性が無いとは言えないので、
+  ;;       除外しない方が良いかもしれません。
   ;;     * ディレクトリの無いURL
   ;;     * http://info.2ch.net/、http://find.2ch.net/
   ;;       板用のサーバではないので、今後も板が作られる可能性はかなり低いでしょう。
@@ -81,7 +84,8 @@
     (define (fix-category category)
       (and-let* ((title  ((if-car-sxpath '(*text*)) category))
                  (boards ((if-sxpath '(board)) category)))
-        (and (not (any (cut string=? <> title) '("チャット" "ツール類" "他のサイト" "運営案内" "特別企画" "まちＢＢＳ")))
+        (and (not (any (cut string=? <> title)
+                       '("チャット" "ツール類" "他のサイト" "運営案内" "特別企画" "まちＢＢＳ")))
              (let1 bs (filter proper-board? boards)
                (and (positive? (length bs))
                     `(category ,title ,@bs))))))
@@ -94,20 +98,24 @@
   (inner-body (call-with-input-file file port->string :encoding 'SHIFT_JIS)))
 
 (define (bbsmenu-html-http->sxml url)
+  (log-format "bbsmenu-html-http->sxml ~a" url)
   (receive (_ _ host _ path _ _) (uri-parse url)
-    (receive (status header body) (let1 out (open-output-string)
-                                    (http-get host
-                                              path
-                                              :user-agent "Monazilla/1.00"
-                                              :sink (open-output-conversion-port out 'UTF-8 :from-code 'SHIFT_JIS :owner? #t)
-                                              :flusher (lambda (sink _)
-                                                         (flush sink)
-                                                         (begin0
-                                                           (get-output-string out)
-                                                           (close-output-port sink)))))
+    (receive (status header body)
+        (let1 out (open-output-string)
+          (http-get host
+                    path
+                    :user-agent "Monazilla/1.00"
+                    :sink (open-output-conversion-port out 'UTF-8 :from-code 'SHIFT_JIS :owner? #t)
+                    :flusher (lambda (sink _)
+                               (flush sink)
+                               (unwind-protect
+                                 (get-output-string out)
+                                 (close-output-port sink)))))
+      (log-format "bbsmenu-html-http->sxml status: ~a header: ~a" status header)
       (cond
-       ((string=? status "200") (inner-body body))
-       (else `(error ,status))))))
+       ((string=? status "200")
+        (inner-body body))
+       (else #f)))))
 
 ;;(define sxml (bbsmenu-html-file->sxml "../bbsmenu.html"))
 ;;(define sxml (bbsmenu-html-http->sxml "http://menu.2ch.net/bbsmenu.html"))

@@ -1,6 +1,7 @@
 *~
 tmp/
 dat/
+log/
 ktkr2.sqlite
 bbsmenu.html
 bbsmenu.xml
