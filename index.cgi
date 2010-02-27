@@ -2,7 +2,6 @@
 (use file.util)
 (use rfc.http)
 (use rfc.uri)
-(use gauche.charconv)
 (use gauche.process)
 (use sxml.sxpath)
 
@@ -16,58 +15,59 @@
 (use lib.db)
 
 (define (get-2ch-subject 板URL)
-  (receive (status header body)
+  (receive (status header gzip-body)
       (receive (_ _ host _ path _ _) (uri-parse 板URL)
-        (let1 out (open-output-string)
-          (let* ((p (db-select-板最終更新日時&板etag 板URL))
-                 (板最終更新日時 (and p (car p)))
-                 (板etag       (and p (cdr p))))
-            (http-get-gzip host
-                           (build-path path "subject.txt")
-                           :user-agent "Monazilla/1.00"
-                           :accept-encoding "gzip"
-                           :if-modified-since 板最終更新日時
-                           :etag              板etag
-                           :sink (open-output-conversion-port out 'UTF-8 :from-code 'SHIFT_JIS :owner? #t)
-                           :flusher (lambda (sink _)
-                                      (begin0
-                                        (string-split (get-output-string out) "\n")
-                                        (close-output-port sink)))))))
-    (print "status:: " status "\n header:: " header "\n")
+        (let* ((p (db-select-板最終更新日時&板etag 板URL))
+               (板最終更新日時 (and p (car p)))
+               (板etag       (and p (cdr p))))
+          (http-get host
+                    (build-path path "subject.txt")
+                    :user-agent "Monazilla/1.00"
+                    :accept-encoding "gzip"
+                    :if-modified-since 板最終更新日時
+                    :etag              板etag)))
     (cond
      ((string=? status "200")
-      (db-insert-板 板URL) ;;optimistic insertion
+      (db-insert-板 板URL) ;;楽観的insertion UNIQUE制約エラーは気にしない
       (and-let* ((板id (db-select-板id 板URL)))
         (db-update-板最終更新日時&板etag 板id (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-        (db-insert-update-スレs-from-subject-text body 板id 板URL))))))
+        (or (and-let* ((c (acadr (assoc "content-encoding" header)))
+                       ((string=? c "gzip"))
+                       (utf8-body (call-with-input-string-gzip gzip-body sjis-port->utf8-string))
+                       (subject   (string-split utf8-body "\n")))
+              (db-insert-update-スレs-from-subject-text subject 板id 板URL)
+              subject)
+            gzip-body)))
+     (else (list status header gzip-body)))))
 
 (define (get-2ch-dat-full スレURL)
   (receive (板URL スレキー) (decompose-スレURL スレURL)
     (and 板URL
          スレキー
-         (and-let* ((unique-id (+ 100000000 (db-select-count-スレ)))
-                    (一時スレファイル (build-path (current-directory) "tmp" (path-swap-extension (x->string unique-id) "dat"))))
-           (receive (status header body)
-               (call-with-output-file 一時スレファイル
-                 (lambda (out)
-                   (receive (_ _ host _ path _ _) (uri-parse スレURL)
-                     (http-get-gzip host
-                                    path
-                                    :user-agent "Monazilla/1.00"
-                                    :accept-encoding "gzip"
-                                    :sink out
-                                    :flusher (lambda _ #t)))))
-             (cond
-              ((string=? status "200")
-               (and-let* ((板id (db-select-板id 板URL)))
-                 (db-insert-スレ 板id スレURL)
-                 (and-let* ((スレid (db-select-スレid スレURL))
-                            (スレファイル (build-path (current-directory) "dat" (path-swap-extension (x->string スレid) "dat"))))
-                   (move-file 一時スレファイル スレファイル :if-exists :backup)
-                   (db-update-スレファイル スレid スレファイル)
-                   (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-                   (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))))
-              (else status)))))))
+         (receive (status header gzip-body)
+             (receive (_ _ host _ path _ _) (uri-parse スレURL)
+               (http-get host
+                         path
+                         :user-agent "Monazilla/1.00"
+                         :accept-encoding "gzip"))
+           (cond
+            ((string=? status "200")
+             (and-let* ((板id (db-select-板id 板URL)))
+               (db-insert-スレ 板id スレURL)
+               (and-let* ((スレid (db-select-スレid スレURL))
+                          (スレファイル (build-path (current-directory) "dat" (path-swap-extension (x->string スレid) "dat"))))
+                 (or (and-let* ((c (acadr (assoc "content-encoding" header)))
+                                ((string=? c "gzip")))
+                       (call-with-output-file スレファイル
+                         (lambda (out)
+                           (call-with-input-string-gzip gzip-body (cut copy-port <> out)))))
+                     (call-with-output-file スレファイル
+                       (lambda (out)
+                         (call-with-input-string gzip-body (cut copy-port <> out)))))
+                 (db-update-スレファイル スレid スレファイル)
+                 (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
+                 (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))))
+            (else status))))))
 
 (define (get-2ch-dat-diff スレid スレURL スレファイル)
   (and-let* ((スレファイルのバイト数 (file-size スレファイル))
@@ -116,6 +116,8 @@
                    (cons 板URL 板名)))
                ((sxpath '(category board)) sxml))))
 
+;;(ces-convert (call-with-input-file "/var/www/subject.txt" port->string) 'SHIFT_JIS)
+
 ;;(drop-table-bbsmenu)
 ;;(create-table-bbsmenu)
 
@@ -126,13 +128,44 @@
 
 ;;(get-2ch-dat-full "http://pc12.2ch.net/sns/dat/1260300967.dat")
 ;;(get-2ch-dat "http://pc12.2ch.net/sns/dat/1260300967.dat")
-;;(get-2ch-dat-full "http://namidame.2ch.net/venture/1262292574.dat")
 ;;(get-2ch-subject "http://gimpo.2ch.net/namazuplus/")
 ;;(get-2ch-subject "http://pc12.2ch.net/sns/")
+;;(get-2ch-subject "http://live24.2ch.net/eq/")
+;;(get-2ch-subject "http://gimpo.2ch.net/localfoods")
+;;(get-2ch-subject "http://localhost/")
 
 ;;(use gauche.reload)
 ;;(reload-modified-modules)
 ;;(reload 'lib.db)
+
+;;(use gauche.charconv)
+;;(use gauche.process)
+;; (define (sjis-port->utf8-string in)
+;;   (call-with-input-conversion in port->string :encoding 'SHIFT_JIS))
+;; (define (call-with-input-string-gzip string proc)
+;;   (call-with-input-string string
+;;     (lambda (source)
+;;       (call-with-process-io
+;;        "zcat -"
+;;        (lambda (in out)
+;;          (copy-port source out)
+;;          (close-output-port out)
+;;          (unwind-protect
+;;           (proc in)
+;;           (close-input-port in)))))))
+;; (receive (status header gzip-body)
+;;     (http-get "localhost"
+;;               "/subject.txt"
+;;               :accept-encoding "gzip")
+;;   (cond
+;;    ((string=? status "200")
+;;     (or (and-let* ((c (acadr (assoc "content-encoding" header)))
+;;                    ((string=? c "gzip"))
+;;                    (utf8-body (call-with-input-string-gzip gzip-body sjis-port->utf8-string))
+;;                    (subject   (string-split utf8-body "\n")))
+;;           subject)
+;;         gzip-body))
+;;      (else (list status header gzip-body))))
 
 ;; Local variables:
 ;; mode: inferior-gauche

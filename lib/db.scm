@@ -3,29 +3,26 @@
   (use sqlite3)
   (use gauche.collection)
   (use util.relation)
-  (use gauche.mop.singleton)
   (use lib.util)
   (export call-with-ktkr2-sqlite
           call-with-ktkr2-sqlite-transaction
           create-table-bbsmenu
           create-table-subject
           drop-table-bbsmenu
+          drop-table-subject
           db-select-板最終更新日時&板etag
           db-select-板id
           db-insert-板
           db-insert-板URL&板名
           db-insert-板URL&板名-transaction
           db-update-板最終更新日時&板etag
-          drop-table-subject
           db-insert-スレ
           db-insert-update-スレs-from-subject-text
           db-update-スレファイル
           db-update-スレ最終更新日時&スレetag
-          db-delete-all-板のスレ
           db-select-スレid
           db-select-スレid-スレファイル-is-not-null
           db-select-スレ最終更新日時&スレetag
-          db-select-count-スレ
           test
           )
   )
@@ -48,9 +45,9 @@
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (dbi-do conn "BEGIN TRANSACTION")
-     (let1 r (proc conn)
-       (dbi-do conn "END TRANSACTION")
-       r))))
+     (unwind-protect
+      (proc conn)
+      (dbi-do conn "END TRANSACTION")))))
 
 (define (create-table-bbsmenu)
   (call-with-ktkr2-sqlite
@@ -83,6 +80,13 @@
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "DROP TABLE bbsmenu"))
+            (result (dbi-execute query)))
+       result))))
+
+(define (drop-table-subject)
+  (call-with-ktkr2-sqlite
+   (lambda (conn)
+     (let* ((query (dbi-prepare conn "DROP TABLE subject"))
             (result (dbi-execute query)))
        result))))
 
@@ -128,7 +132,7 @@
        (for-each (lambda (x)
                    (let ((板URL (car x))
                          (板名  (cdr x)))
-                     ;;optimistic insertion. A constraint error is admittable.
+                     ;;楽観的insertion UNIQUE制約エラーは気にしない
                      (guard (e ((<sqlite3-error> e)
                                 (unless (eq? (condition-ref e 'error-code) SQLITE_CONSTRAINT)
                                   (raise e)))
@@ -154,13 +158,6 @@
                 (result (dbi-execute query 板etag 板id)))
            result)))))))
 
-(define (drop-table-subject)
-  (call-with-ktkr2-sqlite
-   (lambda (conn)
-     (let* ((query (dbi-prepare conn "DROP TABLE subject"))
-            (result (dbi-execute query)))
-       result))))
-
 (define (db-insert-スレ 板id スレURL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
@@ -177,7 +174,7 @@
                    (rxmatch-if (#/^(\d+\.dat)\<\>(.+)\s\((\d+)\)$/ x)
                        (#f スレキー スレタイ レス数)
                        (let1 スレURL (compose-スレURL 板URL スレキー)
-                         ;;optimistic insertion. A constraint error is admittable.
+                         ;;楽観的insertion UNIQUE制約エラーは気にしない
                          (guard (e ((<sqlite3-error> e)
                                     (unless (eq? (condition-ref e 'error-code) SQLITE_CONSTRAINT)
                                       (raise e)))
@@ -212,13 +209,6 @@
                 (result (dbi-execute query スレetag スレid)))
            result)))))))
 
-(define (db-delete-all-板のスレ 板id)
-  (call-with-ktkr2-sqlite
-   (lambda (conn)
-     (let* ((query (dbi-prepare conn "DELETE FROM subject WHERE 板id = ?"))
-            (result (dbi-execute query 板id)))
-       result))))
-
 (define (db-select-スレid スレURL)
   (call-with-ktkr2-sqlite
    (lambda (conn)
@@ -248,16 +238,6 @@
        (acar (map (lambda (row)
                     (cons (getter row "スレ最終更新日時")
                           (getter row "スレetag")))
-                  result))))))
-
-(define (db-select-count-スレ)
-  (call-with-ktkr2-sqlite
-   (lambda (conn)
-     (let* ((query (dbi-prepare conn "SELECT COUNT(id) FROM subject"))
-            (result (dbi-execute query))
-            (getter (relation-accessor result)))
-       (acar (map (lambda (row)
-                    (getter row "COUNT(id)"))
                   result))))))
 
 (define (test n)

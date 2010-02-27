@@ -3,9 +3,12 @@
   (use rfc.http)
   (use rfc.uri)
   (use file.util)
+  (use gauche.charconv)
   (use gauche.process)
   (export acar
           acadr
+          sjis-port->utf8-string
+          call-with-input-string-gzip
           http-get-gzip
           decompose-スレURL
           compose-スレURL
@@ -20,22 +23,20 @@
 (define (acadr l)
   (and l (list-ref l 1 #f)))
 
-(define (delete-keywords! key-list kv-list)
-  (fold delete-keyword! kv-list key-list))
+(define (sjis-port->utf8-string in)
+  (call-with-input-conversion in port->string :encoding 'SHIFT_JIS))
 
-(define (http-get-gzip server request-uri . args)
-  (call-with-process-io
-   ;; why 'cat'? I dunno.
-   "cat | zcat -"
-   (lambda (in out)
-     (let ((sink    (get-keyword :sink    args (open-output-string)))
-           (flusher (get-keyword :flusher args (lambda (x _) (get-output-string x)))))
-       (let ((s out)
-             (f (lambda _ (close-output-port out)))
-             (rest (delete-keywords! '(:sink :flusher) args)))
-         (receive (status header _) (apply http-get `(,server ,request-uri :sink ,s :flusher ,f ,@rest))
-           (copy-port in sink)
-           (values status header (flusher sink header))))))))
+(define (call-with-input-string-gzip string proc)
+  (call-with-input-string string
+    (lambda (source)
+      (call-with-process-io
+       "zcat -"
+       (lambda (in out)
+         (copy-port source out)
+         (close-output-port out)
+         (unwind-protect
+          (proc in)
+          (close-input-port in)))))))
 
 (define (decompose-スレURL スレURL)
   (receive (_ _ host _ path _ _) (uri-parse スレURL)
