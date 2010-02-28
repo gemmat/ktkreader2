@@ -1,3 +1,5 @@
+#!/usr/bin/env gosh
+
 (use srfi-1)
 (use srfi-19)
 (use file.util)
@@ -124,7 +126,7 @@
        ((string=? status "304")
         '更新無し)
        ((string=? status "404")
-        '消失)
+        'スレ消失)
        ((string=? status "416")
         (db-update-null-スレ最終更新日時&スレetag スレid)
         (get-2ch-dat-full スレURL)
@@ -142,14 +144,16 @@
       (get-2ch-dat-full スレURL)))
 
 (define (get-2ch-bbsmenu)
-  (define sxml (bbsmenu-html-http->sxml "http://menu.2ch.net/bbsmenu.html"))
   (log-format "get-2ch-bbsmenu")
-  (db-insert-板URL&板名-transaction
-   (filter-map (lambda (x)
-                 (and-let* ((板URL ((if-car-sxpath '(@ href *text*)) x))
-                            (板名  ((if-car-sxpath '(*text*)) x)))
-                   (cons 板URL 板名)))
-               ((sxpath '(category board)) sxml))))
+  (or (and-let* ((sxml (bbsmenu-html-http->sxml "http://menu.2ch.net/bbsmenu.html")))
+        (db-insert-板URL&板名-transaction
+         (filter-map (lambda (x)
+                       (and-let* ((板URL ((if-car-sxpath '(@ href *text*)) x))
+                                  (板名  ((if-car-sxpath '(*text*)) x)))
+                         (cons 板URL 板名)))
+                     ((sxpath '(category board)) sxml)))
+        '成功)
+      '失敗))
 
 (define (get-2ch-板移転 板URL)
   (define (helper 板URL count)
@@ -205,21 +209,31 @@
        . restargs)
     (cond
      (bbsmenu
-      (get-2ch-bbsmenu))
+      (case (get-2ch-bbsmenu)
+        ((成功) 0)
+        ((板消失 失敗) 1)
+        (else 1)))
      (subject
-      (get-2ch-subject subject))
+      (case (get-2ch-subject subject)
+        ((成功) 0)
+        ((板消失 失敗) 1)
+        (else 1)))
      (dat
-      (get-2ch-dat dat))
+      (case (get-2ch-dat dat)
+        ((成功) 0)
+        ((失敗 あぼーん 移転 更新無し スレ消失) 1)
+        (else 1)))
      (init
       (db-drop-table-bbsmenu)
       (db-drop-table-subject)
       (db-create-table-bbsmenu)
       (db-create-table-subject)
       (delete-directory "dat")
-      (create-directory "dat" #o775))
+      (create-directory "dat" #o775)
+      0)
      (else
-      (usage))))
-  0)
+      (usage)
+      0))))
 
 (define (usage)
   (format #t "usage: main.scm [OPTIONS]... \n")
