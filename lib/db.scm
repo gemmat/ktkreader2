@@ -17,13 +17,18 @@
           db-insert-板URL&板名
           db-insert-板URL&板名-transaction
           db-update-板最終更新日時&板etag
+          db-update-板URL
+          db-delete-板
           db-insert-スレ
           db-insert-update-スレs-from-subject-text
           db-update-スレファイル
           db-update-スレ最終更新日時&スレetag
+          db-update-null-スレ最終更新日時&スレetag
           db-select-スレid
           db-select-スレid-スレファイル-is-not-null
           db-select-スレ最終更新日時&スレetag
+          db-select-板のスレファイル
+          db-delete-板のスレ
           )
   )
 
@@ -149,6 +154,14 @@
                            (dbi-execute query 板URL 板名))))
                l)))))
 
+(define (db-update-板URL src板URL dst板URL)
+  (log-format "db-update-板URL ~a ~a" src板URL dst板URL)
+  (call-with-ktkr2-sqlite
+   (lambda (conn)
+     (let* ((query (dbi-prepare conn "UPDATE bbsmenu SET 板URL = ?, 板最終更新日時 = '', 板etag = '' WHERE 板URL = ?"))
+            (result (dbi-execute query dst板URL src板URL))))
+       result)))
+
 (define (db-update-板最終更新日時&板etag 板id 板最終更新日時 板etag)
   (log-format "db-update-板最終更新日時&板etag ~a ~a ~a" 板id 板最終更新日時 板etag)
   (when (and 板id (or 板最終更新日時 板etag))
@@ -167,6 +180,14 @@
          (let* ((query (dbi-prepare conn "UPDATE bbsmenu SET 板etag = ? WHERE id = ?"))
                 (result (dbi-execute query 板etag 板id)))
            result)))))))
+
+(define (db-delete-板 板id)
+  (log-format "db-delete-板 ~a" 板id)
+  (call-with-ktkr2-sqlite
+   (lambda (conn)
+     (let* ((query (dbi-prepare conn "DELETE FROM bbsmenu WHERE id = ?"))
+            (result (dbi-execute query 板id)))
+       result))))
 
 (define (db-insert-スレ 板id スレURL)
   (log-format "db-insert-スレ ~a ~a" 板id スレURL)
@@ -223,6 +244,14 @@
                 (result (dbi-execute query スレetag スレid)))
            result)))))))
 
+(define (db-update-null-スレ最終更新日時&スレetag スレid)
+  (log-format "db-update-null-スレ最終更新日時&スレetag ~a" スレid)
+  (call-with-ktkr2-sqlite
+   (lambda (conn)
+     (let* ((query (dbi-prepare conn "UPDATE subject SET スレ最終更新日時 = NULL, スレetag = NULL WHERE id = ?"))
+            (result (dbi-execute query スレid)))
+       result))))
+
 (define (db-select-スレid スレURL)
   (log-format "db-select-スレid ~a" スレURL)
   (call-with-ktkr2-sqlite
@@ -255,6 +284,25 @@
        (acar (map (lambda (row)
                     (cons (getter row "スレ最終更新日時")
                           (getter row "スレetag")))
-                  result))))))
+                 result))))))
+
+(define (db-select-板のスレファイル 板id)
+  (log-format "db-select-板のスレファイル ~a" 板id)
+  (call-with-ktkr2-sqlite
+   (lambda (conn)
+     (let* ((query (dbi-prepare conn "SELECT スレファイル FROM subject WHERE 板id = ?"))
+            (result (dbi-execute query 板id))
+            (getter (relation-accessor result)))
+       (map (lambda (row)
+              (getter row "スレファイル"))
+            result)))))
+
+(define (db-delete-板のスレ 板id)
+  (log-format "db-delete-all-板のスレ ~a" 板id)
+  (call-with-ktkr2-sqlite
+   (lambda (conn)
+     (let* ((query (dbi-prepare conn "DELETE FROM subject WHERE 板id = ?"))
+            (result (dbi-execute query 板id)))
+       result))))
 
 (provide "db")
