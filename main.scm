@@ -8,7 +8,9 @@
 (use gauche.process)
 (use gauche.logger)
 (use gauche.parseopt)
+(use gauche.parameter)
 (use sxml.sxpath)
+(use dbi)
 
 ;;(use text.html-lite)
 ;;(use util.match)
@@ -207,39 +209,41 @@
        (#f         "h|help" => usage)
        (else (opt . _) (print "Unknown option : " opt) (usage))
        . restargs)
-    (cond
-     (bbsmenu
-      (case (get-2ch-bbsmenu)
-        ((成功) 0)
-        ((板消失 失敗) 1)
-        (else 1)))
-     (subject
-      (case (get-2ch-subject subject)
-        ((成功) 0)
-        ((板消失 失敗) 1)
-        (else 1)))
-     (dat
-      (case (get-2ch-dat dat)
-        ((成功) 0)
-        ((失敗 あぼーん 移転 更新無し スレ消失) 1)
-        (else 1)))
-     (init
-      (db-drop-table-bbsmenu)
-      (db-drop-table-subject)
-      (db-create-table-bbsmenu)
-      (db-create-table-subject)
-      (delete-directory "dat")
-      (create-directory "dat" #o775)
-      0)
-     (else
-      (usage)
-      0))))
+   (parameterize ((db-ktkr2-conn "dbi:sqlite3:/home/teruaki/ktkreader2/ktkr2.sqlite"))
+     (unwind-protect
+      (cond
+       (bbsmenu
+        (case (get-2ch-bbsmenu)
+          ((成功) 0)
+          ((板消失 失敗) 1)
+          (else 1)))
+       (subject
+        (case (get-2ch-subject subject)
+          ((成功) 0)
+          ((板消失 失敗) 1)
+          (else 1)))
+       (dat
+        (case (get-2ch-dat dat)
+          ((成功) 0)
+          ((失敗 あぼーん 移転 更新無し スレ消失) 1)
+          (else 1)))
+       (init
+        (db-drop-table-bbsmenu)
+        (db-drop-table-subject)
+        (db-create-table-bbsmenu)
+        (db-create-table-subject)
+        (delete-directory* "dat")
+        (create-directory* "dat" #o775)
+        0)
+       (else
+        (usage)
+        0))
+      (dbi-close (db-ktkr2-conn))))))
 
 (define (usage)
   (format #t "usage: main.scm [OPTIONS]... \n")
   (format #t " -b, --bbsmenu     get 2ch bbsmenu.html.\n")
   (format #t " -s, --subject=URL get 2ch board.\n")
-  (format #t " -d, --dat=URL     get 2ch thread.\n")
   (format #t " -d, --dat=URL     get 2ch thread.\n")
   (format #t " -i, --init        initialize.\n")
   (format #t " -h, --help        print this documentation.\n")
