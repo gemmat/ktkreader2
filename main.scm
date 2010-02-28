@@ -1,5 +1,3 @@
-#!/usr/bin/env gosh
-
 (use srfi-1)
 (use srfi-19)
 (use file.util)
@@ -48,7 +46,6 @@
                             (call-with-input-string      gzip-body sjis-port->utf8-string)))
                (subject   (string-split utf8-body "\n")))
           (db-insert-update-スレs-from-subject-text subject 板id 板URL))
-        (log-format "get-2ch-subject success.")
         '成功))
      ((string=? status "404")
       (or (and-let* ((板移転URL (get-2ch-板移転 板URL)))
@@ -74,7 +71,9 @@
              (and-let* ((板id (db-select-板id 板URL)))
                (db-insert-スレ 板id スレURL)
                (and-let* ((スレid (db-select-スレid スレURL))
-                          (スレファイル (build-path (current-directory) "dat" (path-swap-extension (x->string スレid) "dat"))))
+                          (dir (build-path (current-directory) "dat" (distribute-path スレid 100)))
+                          ((create-directory* dir #o775))
+                          (スレファイル (build-path dir (path-swap-extension (x->string スレid) "dat"))))
                  (call-with-output-file スレファイル
                    (lambda (out)
                      (if (string=? (acadr (assoc "content-encoding" header)) "gzip")
@@ -82,7 +81,6 @@
                        (call-with-input-string      gzip-body (cut copy-port <> out)))))
                  (db-update-スレファイル スレid スレファイル)
                  (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-                 (log-format "get-2ch-dat-full success.")
                  '成功)))
             (else '失敗))))))
 
@@ -117,7 +115,6 @@
           (begin
             (call-with-input-process (format #f "sed '1,1d' >> ~a" スレファイル)
               (lambda _ #t) :input スレ差分ファイル)
-            (log-format "get-2ch-dat-diff success.")
             '成功)
           (begin
             (db-update-null-スレ最終更新日時&スレetag スレid)
@@ -134,7 +131,6 @@
         (get-2ch-dat-full スレURL)
         'あぼーん)
        (else
-        (log-format "get-2ch-dat-diff unhandled status: ~a" status)
         '失敗)))))
 
 (define (get-2ch-dat スレURL)
@@ -214,18 +210,36 @@
       (cond
        (bbsmenu
         (case (get-2ch-bbsmenu)
-          ((成功) 0)
-          ((板消失 失敗) 1)
+          ((成功) =>
+           (lambda (x)
+             (log-format "get-2ch-bbsmenu ~a" x)
+             0))
+          ((板消失 失敗) =>
+           (lambda (x)
+             (log-format "get-2ch-bbsmenu error: ~a" x)
+             1))
           (else 1)))
        (subject
         (case (get-2ch-subject subject)
-          ((成功) 0)
-          ((板消失 失敗) 1)
+          ((成功) =>
+           (lambda (x)
+             (log-format "get-2ch-subject ~a" x)
+             0))
+          ((板消失 失敗) =>
+           (lambda (x)
+             (log-format "get-2ch-subject error: ~a" x)
+             1))
           (else 1)))
        (dat
         (case (get-2ch-dat dat)
-          ((成功) 0)
-          ((失敗 あぼーん 移転 更新無し スレ消失) 1)
+          ((成功) =>
+           (lambda (x)
+             (log-format "get-2ch-dat ~a" x)
+             0))
+          ((失敗 あぼーん 移転 更新無し スレ消失) =>
+           (lambda (x)
+             (log-format "get-2ch-dat error: ~a" x)
+             1))
           (else 1)))
        (init
         (db-drop-table-bbsmenu)
@@ -234,6 +248,7 @@
         (db-create-table-subject)
         (delete-directory* "dat")
         (create-directory* "dat" #o775)
+        (log-format "initialized.")
         0)
        (else
         (usage)
@@ -241,7 +256,7 @@
       (dbi-close (db-ktkr2-conn))))))
 
 (define (usage)
-  (format #t "usage: main.scm [OPTIONS]... \n")
+  (format #t "usage: gosh main.scm [OPTIONS]... \n")
   (format #t " -b, --bbsmenu     get 2ch bbsmenu.html.\n")
   (format #t " -s, --subject=URL get 2ch board.\n")
   (format #t " -d, --dat=URL     get 2ch thread.\n")

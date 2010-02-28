@@ -12,6 +12,7 @@
           http-get-gzip
           decompose-スレURL
           compose-スレURL
+          distribute-path
   )
 )
 
@@ -51,5 +52,9 @@
   (receive (_ _ host _ path _ _) (uri-parse 板URL)
     (and path
          (uri-compose  :scheme "http" :host host :path (build-path path "dat" スレキー)))))
+
+(define (distribute-path n m)
+  (let1 x (* m (quotient n m))
+    (string-join (map number->string (list (+ x 1) (+ x m))) "_")))
 
 (provide "util")
