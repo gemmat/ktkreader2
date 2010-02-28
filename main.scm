@@ -1,9 +1,11 @@
 (use srfi-1)
+(use srfi-19)
 (use file.util)
 (use rfc.http)
 (use rfc.uri)
 (use gauche.process)
 (use gauche.logger)
+(use gauche.parseopt)
 (use sxml.sxpath)
 
 ;;(use text.html-lite)
@@ -11,11 +13,12 @@
 ;;(use www.cgi)
 
 (add-load-path "./")
-(use lib.bbsmenu)
-(use lib.util)
-(use lib.db)
+(use ktkr2.bbsmenu)
+(use ktkr2.util)
+(use ktkr2.db)
 
-(log-open "./log/access.log" :prefix "~T:")
+(log-open (build-path (current-directory) "log" (path-swap-extension (date->string (current-date) "~b_~d_~y") "log"))
+          :prefix "~T:")
 
 (define (get-2ch-subject 板URL)
   (log-format "get-2ch-subject ~a" 板URL)
@@ -78,9 +81,6 @@
                  (log-format "get-2ch-dat-full success.")
                  '成功)))
             (else '失敗))))))
-
-;;(db-update-null-スレ最終更新日時&スレetag 1)
-;;(db-select-スレ最終更新日時&スレetag 1)
 
 (define (get-2ch-dat-diff スレid スレURL スレファイル)
   (log-format "get-2ch-dat-diff ~a ~a ~a" スレid スレURL スレファイル)
@@ -194,11 +194,48 @@
         (db-delete-板のスレ 板id)
         #f)))))
 
-;;(drop-table-bbsmenu)
-;;(create-table-bbsmenu)
+(define (main args)
+  (let-args (cdr args)
+      ((bbsmenu    "b|bbsmenu")
+       (subject    "s|subject=s")
+       (dat        "d|dat=s")
+       (init       "i|init")
+       (#f         "h|help" => usage)
+       (else (opt . _) (print "Unknown option : " opt) (usage))
+       . restargs)
+    (cond
+     (bbsmenu
+      (get-2ch-bbsmenu))
+     (subject
+      (get-2ch-subject subject))
+     (dat
+      (get-2ch-dat dat))
+     (init
+      (db-drop-table-bbsmenu)
+      (db-drop-table-subject)
+      (db-create-table-bbsmenu)
+      (db-create-table-subject)
+      (delete-directory "dat")
+      (create-directory "dat" #o775))
+     (else
+      (usage))))
+  0)
 
-;;(drop-table-subject)
-;;(create-table-subject)
+(define (usage)
+  (format #t "usage: main.scm [OPTIONS]... \n")
+  (format #t " -b, --bbsmenu     get 2ch bbsmenu.html.\n")
+  (format #t " -s, --subject=URL get 2ch board.\n")
+  (format #t " -d, --dat=URL     get 2ch thread.\n")
+  (format #t " -d, --dat=URL     get 2ch thread.\n")
+  (format #t " -i, --init        initialize.\n")
+  (format #t " -h, --help        print this documentation.\n")
+  #t)
+
+;;(db-drop-table-bbsmenu)
+;;(db-create-table-bbsmenu)
+
+;;(db-drop-table-subject)
+;;(db-create-table-subject)
 
 ;;(get-2ch-bbsmenu)
 
@@ -212,7 +249,7 @@
 
 ;;(use gauche.reload)
 ;;(reload-modified-modules)
-;;(reload 'lib.db)
+;;(reload 'ktkr2.db)
 
 ;;(use gauche.charconv)
 ;;(use gauche.process)

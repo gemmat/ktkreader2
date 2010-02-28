@@ -1,4 +1,4 @@
-(define-module lib.bbsmenu
+(define-module ktkr2.bbsmenu
   (use srfi-1)
   (use gauche.charconv)
   (use gauche.logger)
@@ -13,7 +13,7 @@
           )
 )
 
-(select-module lib.bbsmenu)
+(select-module ktkr2.bbsmenu)
 
 (define (inner-body source-string)
   ;;bタグ(カテゴリ)とaタグ(板)のみ取り出す。

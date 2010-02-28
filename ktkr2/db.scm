@@ -1,16 +1,16 @@
-(define-module lib.db
+(define-module ktkr2.db
   (use dbi)
   (use sqlite3)
   (use gauche.collection)
   (use gauche.logger)
   (use util.relation)
-  (use lib.util)
+  (use ktkr2.util)
   (export call-with-ktkr2-sqlite
           call-with-ktkr2-sqlite-transaction
-          create-table-bbsmenu
-          create-table-subject
-          drop-table-bbsmenu
-          drop-table-subject
+          db-create-table-bbsmenu
+          db-create-table-subject
+          db-drop-table-bbsmenu
+          db-drop-table-subject
           db-select-板最終更新日時&板etag
           db-select-板id
           db-insert-板
@@ -35,7 +35,7 @@
 ;;(use srfi-1)
 ;;(for-each print (filter-map (lambda (x) (and (eq? 'define (car x)) (caadr x))) (call-with-input-file "./ktkr2db.scm" port->sexp-list)))
 
-(select-module lib.db)
+(select-module ktkr2.db)
 
 (define (call-with-ktkr2-sqlite proc)
   (guard (e ((<dbi-error> e)
@@ -54,8 +54,8 @@
       (proc conn)
       (dbi-do conn "END TRANSACTION")))))
 
-(define (create-table-bbsmenu)
-  (log-format "create-table-bbsmenu")
+(define (db-create-table-bbsmenu)
+  (log-format "db-create-table-bbsmenu")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "CREATE TABLE IF NOT EXISTS bbsmenu (\
@@ -67,8 +67,8 @@
             (result (dbi-execute query)))
        result))))
 
-(define (create-table-subject)
-  (log-format "create-table-subject")
+(define (db-create-table-subject)
+  (log-format "db-create-table-subject")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "CREATE TABLE IF NOT EXISTS subject (\
@@ -83,16 +83,16 @@
             (result (dbi-execute query)))
        result))))
 
-(define (drop-table-bbsmenu)
-  (log-format "drop-table-bbsmenu")
+(define (db-drop-table-bbsmenu)
+  (log-format "db-drop-table-bbsmenu")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "DROP TABLE bbsmenu"))
             (result (dbi-execute query)))
        result))))
 
-(define (drop-table-subject)
-  (log-format "drop-table-subject")
+(define (db-drop-table-subject)
+  (log-format "db-drop-table-subject")
   (call-with-ktkr2-sqlite
    (lambda (conn)
      (let* ((query (dbi-prepare conn "DROP TABLE subject"))

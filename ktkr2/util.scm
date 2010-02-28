@@ -1,4 +1,4 @@
-(define-module lib.util
+(define-module ktkr2.util
   (use srfi-1)
   (use rfc.http)
   (use rfc.uri)
@@ -15,7 +15,7 @@
   )
 )
 
-(select-module lib.util)
+(select-module ktkr2.util)
 
 (define (acar l)
   (and l (list-ref l 0 #f)))
