@@ -1,5 +1,4 @@
 (use srfi-1)
-(use srfi-19)
 (use file.util)
 (use rfc.http)
 (use rfc.uri)
@@ -19,8 +18,7 @@
 (use ktkr2.util)
 (use ktkr2.db)
 
-(log-open (build-path (current-directory) "log" (path-swap-extension (date->string (current-date) "~b_~d_~y") "log"))
-          :prefix "~T:")
+(ktkr2-log-open)
 
 (define (get-2ch-subject 板URL)
   (log-format "get-2ch-subject ~a" 板URL)
@@ -47,6 +45,8 @@
                (subject   (string-split utf8-body "\n")))
           (db-insert-update-スレs-from-subject-text subject 板id 板URL))
         '成功))
+     ((string=? status "304")
+      '更新無し)
      ((string=? status "404")
       (or (and-let* ((板移転URL (get-2ch-板移転 板URL)))
             (get-2ch-subject 板移転URL))
@@ -115,6 +115,7 @@
           (begin
             (call-with-input-process (format #f "sed '1,1d' >> ~a" スレファイル)
               (lambda _ #t) :input スレ差分ファイル)
+            (delete-files `(,スレ差分ファイル))
             '成功)
           (begin
             (db-update-null-スレ最終更新日時&スレetag スレid)
@@ -135,7 +136,7 @@
 
 (define (get-2ch-dat スレURL)
   (log-format "get-2ch-dat ~a" スレURL)
-  (or (and-let* ((p (db-select-スレid-スレファイル-is-not-null スレURL))
+  (or (and-let* ((p (db-select-スレid&スレファイル-is-not-null スレURL))
                  (スレid     (car p))
                  (スレファイル (cdr p)))
         (get-2ch-dat-diff スレid スレURL スレファイル))
@@ -202,12 +203,17 @@
        (subject    "s|subject=s")
        (dat        "d|dat=s")
        (init       "i|init")
+       (test       "t|test=s")
        (#f         "h|help" => usage)
        (else (opt . _) (print "Unknown option : " opt) (usage))
        . restargs)
-   (parameterize ((db-ktkr2-conn "dbi:sqlite3:/home/teruaki/ktkreader2/ktkr2.sqlite"))
+   (parameterize ((db-ktkr2-conn #f))
+     ;;"dbi:sqlite3:/home/teruaki/ktkreader2/db/ktkr2.sqlite"))
      (unwind-protect
       (cond
+       (test
+        (print test)
+        0)
        (bbsmenu
         (case (get-2ch-bbsmenu)
           ((成功) =>
@@ -221,7 +227,7 @@
           (else 1)))
        (subject
         (case (get-2ch-subject subject)
-          ((成功) =>
+          ((成功 更新無し) =>
            (lambda (x)
              (log-format "get-2ch-subject ~a" x)
              0))
@@ -232,11 +238,11 @@
           (else 1)))
        (dat
         (case (get-2ch-dat dat)
-          ((成功) =>
+          ((成功 更新無し) =>
            (lambda (x)
              (log-format "get-2ch-dat ~a" x)
              0))
-          ((失敗 あぼーん 移転 更新無し スレ消失) =>
+          ((失敗 あぼーん 移転 スレ消失) =>
            (lambda (x)
              (log-format "get-2ch-dat error: ~a" x)
              1))
@@ -248,6 +254,7 @@
         (db-create-table-subject)
         (delete-directory* "dat")
         (create-directory* "dat" #o775)
+        (create-directory* "log" #o775)
         (log-format "initialized.")
         0)
        (else

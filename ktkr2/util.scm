@@ -1,10 +1,13 @@
 (define-module ktkr2.util
   (use srfi-1)
+  (use srfi-19)
   (use rfc.http)
   (use rfc.uri)
   (use file.util)
+  (use text.html-lite)
   (use gauche.charconv)
   (use gauche.process)
+  (use gauche.logger)
   (export acar
           acadr
           sjis-port->utf8-string
@@ -13,6 +16,11 @@
           decompose-スレURL
           compose-スレURL
           distribute-path
+          ktkr2-log-open
+          href-bbsmenu
+          href-subject
+          href-dat
+          パンくず
   )
 )
 
@@ -56,5 +64,40 @@
 (define (distribute-path n m)
   (let1 x (* m (quotient n m))
     (string-join (map number->string (list (+ x 1) (+ x m))) "_")))
+
+(define (ktkr2-log-open)
+  (log-open (build-path (current-directory) "log" (path-swap-extension (date->string (current-date) "~b_~d_~y") "log"))
+            :prefix "~T:"))
+
+(define (href-bbsmenu)
+  "./bbsmenu.cgi")
+
+(define (href-subject 板id)
+  (string-append "./subject.cgi?q=" (x->string 板id)))
+
+(define (href-dat スレid)
+  (string-append "./dat.cgi?q=" (x->string スレid)))
+
+(define (パンくず . args)
+  (let-optionals* args ((板id #f)
+                        (板名 #f)
+                        (スレid #f)
+                        (スレタイ #f)
+                        (レス数 #f))
+    (html:h2
+     (html:a :href (href-bbsmenu) "メニュー")
+     (if (and 板id 板名)
+       `(" >> "
+         ,(html:a
+           :href (href-subject 板id)
+           (html:span :class "board-title" (html-escape-string 板名)))
+         ,(if (and スレid スレタイ レス数)
+            `(" >> "
+              ,(html:a
+                :href (href-dat スレid)
+                (html:span :class "thread-title" (html-escape-string スレタイ))
+                (html:span :class "thread-res"   "(" レス数 ")")))
+            '()))
+       '()))))
 
 (provide "util")
