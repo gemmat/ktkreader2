@@ -8,6 +8,7 @@
   (use gauche.charconv)
   (use gauche.process)
   (use gauche.logger)
+  (use gauche.parameter)
   (export acar
           acadr
           sjis-port->utf8-string
@@ -17,10 +18,12 @@
           compose-スレURL
           distribute-path
           ktkr2-log-open
+          dry?
           href-bbsmenu
           href-subject
           href-dat
           パンくず
+          html-formatter
   )
 )
 
@@ -69,14 +72,16 @@
   (log-open (build-path (current-directory) "log" (path-swap-extension (date->string (current-date) "~b_~d_~y") "log"))
             :prefix "~T:"))
 
+(define dry? (make-parameter #f))
+
 (define (href-bbsmenu)
-  "./bbsmenu.cgi")
+  (string-append "./bbsmenu.cgi" (if (dry?) "?dry=1" "")))
 
 (define (href-subject 板id)
-  (string-append "./subject.cgi?q=" (x->string 板id)))
+  (string-append "./subject.cgi?q=" (x->string 板id) (if (dry?) "&dry=1" "")))
 
 (define (href-dat スレid)
-  (string-append "./dat.cgi?q=" (x->string スレid)))
+  (string-append "./dat.cgi?q=" (x->string スレid) (if (dry?) "&dry=1" "")))
 
 (define (パンくず . args)
   (let-optionals* args ((板id #f)
@@ -99,5 +104,66 @@
                 (html:span :class "thread-res"   "(" レス数 ")")))
             '()))
        '()))))
+
+(define regexp-html (string->regexp "(((ht|f|t)tp(s?))\:\/\/){1}((([\\w\-]{2,}\.)+[a-zA-Z]{2,})|((?:(?:25[0-5]|2[0-4]\\d|[01]\\d\\d|\\d?\\d)(?:(\\.?\\d)))){4})(:\\w+)?\/?([\\w\\-\\._\\?\\,\\'\/\\+&%\\$#\\=~]*)?"))
+
+;;(regexp-html "http://www.google.co.jp/")
+;;(regexp-html "http://192.168.11.3/")
+;;(regexp-html "http://127.0.0.1/") ;;not match
+;;(regexp-html "http://localhost/")
+;;(regexp-html "https://localhost/")
+;;(regexp-html "ttp://localhost/")
+;;(regexp-html "ftp://localhost/")
+;;(regexp-html "ttps://localhost/")
+;;(regexp-html "http://localhost/hoge/fuga/file1.jpg.bz2")
+
+(define (html-formatter source)
+  (define c 0)
+  (define (res-formatter line)
+    (inc! c)
+    (and-let* ((c (x->string c))
+               (l (string-split line "<>"))
+               (name  (list-ref l 0 #f))
+               (mail  (list-ref l 1 #f))
+               (date  (list-ref l 2 #f))
+               (body  (list-ref l 3 #f))
+               (title (list-ref l 4 "")))
+      (string-append
+       "<div class='res' id='" c "'>"
+       "<span class='res-id'>" c ":</span>"
+       "<span class='res-name'>"
+       (regexp-replace-all #/<\/b>([^<]*)<b>/ name "<b>\\1</b>")
+       "</span>"
+       "<span class='res-mail'>"
+       (html-escape-string mail)
+       "</span>"
+       "<span class='res-date'>"
+       (regexp-replace #/ID:(.+)/ date "<span class='res-id'>ID:\\1</span>")
+       "</span>"
+       "<div class='res-body'>"
+       (regexp-replace-all*
+        (regexp-replace-all #/<a[^>]*>/ body "<a>")
+        #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})(-|～|～|=|＝)(\d{1,4})<\/a>/
+        "<a class='res-ref' href='#\\2'>\\1\\2</a>\\3<a class='res-ref' href='#\\4'>\\4</a>"
+        #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})<\/a>/
+        "<a class='res-ref' href='#\\2'>\\1\\2</a>"
+        regexp-html
+        (lambda (m)
+          (let* ((s (m 0))
+                 (t (rxmatch-if (#/^ttp:\/\// s)
+                        (#f)
+                        (string-append "h" s)
+                        s)))
+            (format #f "<a href='~a'>~a</a>" t s))))
+       "</div>"
+       "</div>")))
+  (string-join (map (lambda (line)
+                      (or (res-formatter line)
+                          ""))
+                    (string-split source "\n")) "\n"))
+
+;;(res-formatter "</b> ◆GEMMA <b><>sage<>2000/01/01(土) 12:00:00 ID:kRFPgbVx BE:11111111-###<> <a href='../test/read.cgi/nandemo/1114790198/1' target='_blank'>&gt;&gt;1-100</a>ひゃっはーーー ttp://www.google.co.jp/ <a href='../test/read.cgi/nandemo/1114790198/999' target='_blank'>＞＞999</a> tesuto--- http://192.168.11.3/ http://127.0.0.1/ http://localhost <>")
+;;"<div class='res' id='3'><span class='res-id'>3:</span><span class='res-name'><b> ◆GEMMA </b></span><span class='res-mail'>sage</span><span class='res-date'>2000/01/01(土) 12:00:00 <span class='res-id'>ID:kRFPgbVx BE:11111111-###</span></span><div class='res-body'> <a class='res-ref' href='#1'>&gt;&gt;1</a>-<a class='res-ref' href='#100'>100</a>ひゃっはーーー <a href='http://www.google.co.jp/'>ttp://www.google.co.jp/</a> <a class='res-ref' href='#999'>＞＞999</a> tesuto--- <a href='http://192.168.11.3/'>http://192.168.11.3/</a> http://127.0.0.1/ <a href='http://localhost'>http://localhost</a> </div></div>"
+
 
 (provide "util")

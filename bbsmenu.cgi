@@ -11,6 +11,7 @@
 (define (main args)
   (cgi-main
    (lambda (params)
+     (dry? (cgi-get-parameter "dry" params :default #f :convert (compose positive? x->integer)))
      `(,(cgi-header)
        ,(html-doctype)
        ,(html:html
@@ -26,7 +27,7 @@
                   (html:li
                    (html:dl
                     (html:a
-                     :href (html-escape-string (href-subject 板id))
+                     :href (href-subject 板id)
                      (html:dt (html-escape-string 板名)))
                     (html:dd (html-escape-string 板URL))))))
                 (db-select-板id&板URL&板名)))))

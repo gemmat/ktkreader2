@@ -7,6 +7,7 @@
 (use gauche.parseopt)
 (use gauche.parameter)
 (use sxml.sxpath)
+(use util.match)
 (use dbi)
 
 ;;(use text.html-lite)
@@ -113,9 +114,8 @@
           ;;スレ差分ファイルの先頭1行目に、rangeで-1した分の\nが
           ;;入っているので、消してからスレファイルにappendする
           (begin
-            (call-with-input-process (format #f "sed '1,1d' >> ~a" スレファイル)
+            (call-with-input-process (format #f "sed '1,1d' >> ~a && rm ~a" スレファイル スレ差分ファイル)
               (lambda _ #t) :input スレ差分ファイル)
-            (delete-files `(,スレ差分ファイル))
             '成功)
           (begin
             (db-update-null-スレ最終更新日時&スレetag スレid)
@@ -207,8 +207,7 @@
        (#f         "h|help" => usage)
        (else (opt . _) (print "Unknown option : " opt) (usage))
        . restargs)
-   (parameterize ((db-ktkr2-conn #f))
-     ;;"dbi:sqlite3:/home/teruaki/ktkreader2/db/ktkr2.sqlite"))
+   (parameterize ((db-ktkr2-conn "dbi:sqlite3:/home/teruaki/ktkreader2/db/ktkr2.sqlite"))
      (unwind-protect
       (cond
        (test

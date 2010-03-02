@@ -13,7 +13,7 @@
 (use ktkr2.db)
 
 (define (update-subject 板URL)
-  (or 'debug
+  (or (dry?)
       (and-let* ((process (run-process `(gosh main.scm ,(string-append "--subject=" 板URL))))
                  ((process-wait process)))
         (zero? (process-exit-status process)))))
@@ -21,6 +21,7 @@
 (define (main args)
   (cgi-main
    (lambda (params)
+     (dry? (cgi-get-parameter "dry" params :default #f :convert (compose positive? x->integer)))
      `(,(cgi-header)
        ,(html-doctype)
        ,(html:html
@@ -43,8 +44,8 @@
                                (html:dt
                                 (html:a
                                  :href (href-dat スレid)
-                                (html:span :class "thread-title" (html-escape-string スレタイ))
-                                (html:span :class "thread-res" "(" レス数 ")") ))
+                                 (html:span :class "thread-title" (html-escape-string スレタイ))
+                                 (html:span :class "thread-res" "(" レス数 ")") ))
                                (html:dd (html-escape-string スレURL))))))
                            (db-select-スレid&スレURL&スレタイ&レス数 板id))))
                   "error"))
