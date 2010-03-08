@@ -184,17 +184,12 @@
   (log-format "db-insert-板URL&板名-transaction length: ~a" (length l))
   (call-with-ktkr2-db-transaction
    (lambda (conn)
-     (let1 query (dbi-prepare conn "INSERT INTO bbsmenu (板URL, 板名) VALUES (?, ?)")
+     (let1 query (dbi-prepare conn "INSERT OR IGNORE INTO bbsmenu (板URL, 板名) VALUES (?, ?)")
        (begin0
         (for-each (lambda (x)
                     (let ((板URL (car x))
                           (板名  (cdr x)))
-                      ;;楽観的insertion UNIQUE制約エラーは気にしない
-                      (guard (e ((<sqlite3-error> e)
-                                 (unless (eq? (condition-ref e 'error-code) SQLITE_CONSTRAINT)
-                                   (raise e)))
-                                (else (raise e)))
-                        (dbi-execute query 板URL 板名))))
+                      (dbi-execute query 板URL 板名)))
                   l)
         (dbi-close query))))))
 
@@ -233,25 +228,19 @@
   (log-format "db-insert-update-スレs-from-subject-text length: ~a ~a ~a" (length body) 板id 板URL)
   (call-with-ktkr2-db-transaction
    (lambda (conn)
-     (let* ((query0 (dbi-prepare conn "INSERT INTO subject (板id, スレURL) VALUES (?, ?)"))
-            (query1 (dbi-prepare conn "UPDATE subject SET スレタイ = ?, レス数 = ? WHERE スレURL = ?")))
-       (begin0
-        (for-each (lambda (x)
-                    (rxmatch-if (#/^(\d+\.dat)\<\>(.+)\s\((\d+)\)$/ x)
-                        (#f スレキー スレタイ レス数)
-                        (let1 スレURL (compose-スレURL 板URL スレキー)
-                          ;;楽観的insertion UNIQUE制約エラーは気にしない
-                          (guard (e ((<sqlite3-error> e)
-                                     (unless (eq? (condition-ref e 'error-code) SQLITE_CONSTRAINT)
-                                       (raise e)))
-                                    (else (raise e)))
-                            (dbi-execute query0 板id スレURL))
-                          (dbi-execute query1 スレタイ レス数 スレURL))
-                        #f))
-                  body)
-        (begin
-          (dbi-close query0)
-          (dbi-close query1)))))))
+     (dbi-do conn "CREATE TEMPORARY TABLE subject_new (板id, スレURL, スレタイ, レス数)")
+     (let1 query (dbi-prepare conn "INSERT INTO subject_new (板id, スレURL, スレタイ, レス数) VALUES (?, ?, ?, ?)")
+       (for-each (lambda (x)
+                   (rxmatch-if (#/^(\d+\.dat)\<\>(.+)\s\((\d+)\)$/ x)
+                       (#f スレキー スレタイ レス数)
+                       (let1 スレURL (compose-スレURL 板URL スレキー)
+                         (dbi-execute query 板id スレURL スレタイ レス数))
+                       #f))
+                 body)
+       (dbi-close query))
+     (dbi-do conn "DELETE FROM subject WHERE スレURL IN (SELECT スレURL from subject WHERE 板id = ? AND スレファイル IS NULL EXCEPT SELECT スレURL from subject_new)" '() 板id)
+     (dbi-do conn "UPDATE subject SET レス数 = (SELECT レス数 FROM subject_new WHERE subject.スレURL = subject_new.スレURL) WHERE スレURL IN (SELECT スレURL FROM subject WHERE 板id = ? INTERSECT SELECT スレURL FROM subject_new)" '() 板id)
+     (dbi-do conn "INSERT OR IGNORE INTO subject (板id, スレURL, スレタイ, レス数) SELECT 板id, スレURL, スレタイ, レス数 FROM subject_new"))))
 
 (define (db-update-スレファイル スレid スレファイル)
   (log-format "db-update-スレファイル ~a ~a" スレid スレファイル)

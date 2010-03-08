@@ -6,13 +6,10 @@
 (use gauche.logger)
 (use gauche.parseopt)
 (use gauche.parameter)
+(use gauche.charconv)
 (use sxml.sxpath)
 (use util.match)
 (use dbi)
-
-;;(use text.html-lite)
-;;(use util.match)
-;;(use www.cgi)
 
 (add-load-path "./")
 (use ktkr2.bbsmenu)
@@ -269,55 +266,6 @@
   (format #t " -i, --init        initialize.\n")
   (format #t " -h, --help        print this documentation.\n")
   #t)
-
-;;(db-drop-table-bbsmenu)
-;;(db-create-table-bbsmenu)
-
-;;(db-drop-table-subject)
-;;(db-create-table-subject)
-
-;;(get-2ch-bbsmenu)
-
-;;(get-2ch-dat-full "http://pc12.2ch.net/sns/dat/1260300967.dat")
-;;(get-2ch-dat "http://pc12.2ch.net/sns/dat/1260300967.dat")
-;;(get-2ch-subject "http://gimpo.2ch.net/namazuplus/")
-;;(get-2ch-subject "http://pc12.2ch.net/sns/")
-;;(get-2ch-subject "http://live24.2ch.net/eq/")
-;;(get-2ch-subject "http://gimpo.2ch.net/localfoods")
-;;(get-2ch-subject "http://localhost/")
-
-;;(use gauche.reload)
-;;(reload-modified-modules)
-;;(reload 'ktkr2.db)
-
-;;(use gauche.charconv)
-;;(use gauche.process)
-;; (define (sjis-port->utf8-string in)
-;;   (call-with-input-conversion in port->string :encoding 'SHIFT_JIS))
-;; (define (call-with-input-string-gzip string proc)
-;;   (call-with-input-string string
-;;     (lambda (source)
-;;       (call-with-process-io
-;;        "zcat -"
-;;        (lambda (in out)
-;;          (copy-port source out)
-;;          (close-output-port out)
-;;          (unwind-protect
-;;           (proc in)
-;;           (close-input-port in)))))))
-;; (receive (status header gzip-body)
-;;     (http-get "localhost"
-;;               "/subject.txt"
-;;               :accept-encoding "gzip")
-;;   (cond
-;;    ((string=? status "200")
-;;     (or (and-let* ((c (acadr (assoc "content-encoding" header)))
-;;                    ((string=? c "gzip"))
-;;                    (utf8-body (call-with-input-string-gzip gzip-body sjis-port->utf8-string))
-;;                    (subject   (string-split utf8-body "\n")))
-;;           subject)
-;;         gzip-body))
-;;      (else (list status header gzip-body))))
 
 ;; Local variables:
 ;; mode: inferior-gauche
