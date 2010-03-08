@@ -22,35 +22,43 @@
   (cgi-main
    (lambda (params)
      (dry? (cgi-get-parameter "dry" params :default #f :convert (compose positive? x->integer)))
-     `(,(cgi-header)
-       ,(html-doctype)
-       ,(html:html
-         (html:head
-          (html:meta :http-equiv "Content-Type" :content "text/html; charset=UTF-8")
-          (html:meta :http-equiv "Content-Script-Type" :content "text/html; charset=UTF-8")
-          (html:title "板"))
-         (html:body
-          (or (and-let* ((板id (cgi-get-parameter "q" params :default #f :convert x->integer))
-                         (p (db-select-板URL&板名 板id))
-                         (板URL (car p))
-                         (板名  (cdr p)))
-                (if (update-subject 板URL)
-                  `(,(パンくず 板id 板名)
-                    ,(html:ul
-                      (map (match-lambda
-                            ((スレid スレURL スレタイ レス数)
-                             (html:li
-                              (html:dl
-                               (html:dt
-                                (html:a
-                                 :href (href-dat スレid)
-                                 (html:span :class "thread-title" (html-escape-string スレタイ))
-                                 (html:span :class "thread-res" "(" レス数 ")") ))
-                               (html:dd (html-escape-string スレURL))))))
-                           (db-select-スレid&スレURL&スレタイ&レス数 板id))))
-                  "error"))
-              "fail")))
-       ))))
+     (or (and-let* ((板id (cgi-get-parameter "q" params :default #f :convert x->integer))
+                    (p (db-select-板URL&板名 板id))
+                    (板URL (car p))
+                    (板名  (cdr p)))
+           (if (update-subject 板URL)
+             `(ktkreader2
+               (@ (type "result"))
+               (board
+                (id ,板id)
+                (title ,板名)
+                ,@(receive (host path) (decompose-板URL 板URL)
+                    (if (and host path)
+                      `((host ,host)
+                        (path ,path))
+                      '(())))
+                (url ,板URL)
+                (subjects
+                 ,@(map (match-lambda
+                         ((スレid スレURL スレタイ レス数 スレファイル)
+                          `(subject
+                            (id ,スレid)
+                            (title ,スレタイ)
+                            (rescount ,レス数)
+                            (key ,(extract-スレキー スレURL))
+                            (cache ,(or (and スレファイル 1) 0)))))
+                        (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id)))))
+             `(ktkreader2
+               (@ (type "error"))
+               (board
+                (id ,板id)
+                (title ,板名)
+                (url ,板URL))
+               (subjects "error"))))
+         `(ktkreader2 (@ (type "error")) "fatal")))
+   :output-proc cgi-output-sxml->xml
+   :on-error cgi-on-error
+   ))
 
 ;; Local variables:
 ;; mode: inferior-gauche

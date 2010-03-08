@@ -33,7 +33,7 @@
           db-select-板id&スレURL&スレタイ&レス数
           db-select-スレid&スレファイル-is-not-null
           db-select-スレファイル-is-not-null
-          db-select-スレid&スレURL&スレタイ&レス数
+          db-select-スレid&スレURL&スレタイ&レス数&スレファイル
           db-select-スレ最終更新日時&スレetag
           db-select-板のスレファイル
           db-delete-板のスレ
@@ -329,18 +329,19 @@
                     result))
          (dbi-close result))))))
 
-(define (db-select-スレid&スレURL&スレタイ&レス数 板id)
-  (log-format "db-select-スレid&スレURL&スレタイ&レス数 ~a" 板id)
+(define (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id)
+  (log-format "db-select-スレid&スレURL&スレタイ&レス数&スレファイル ~a" 板id)
   (call-with-ktkr2-db
    (lambda (conn)
-     (let* ((result (dbi-do conn "SELECT id, スレURL, スレタイ, レス数 FROM subject WHERE 板id = ?" '() 板id))
+     (let* ((result (dbi-do conn "SELECT id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE 板id = ?" '() 板id))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)
                 (list (getter row "id")
                       (getter row "スレURL")
                       (getter row "スレタイ")
-                      (getter row "レス数")))
+                      (getter row "レス数")
+                      (getter row "スレファイル")))
               result)
          (dbi-close result))))))
 
