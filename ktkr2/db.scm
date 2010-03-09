@@ -14,6 +14,7 @@
           db-drop-table-bbsmenu
           db-drop-table-subject
           db-select-板id&板URL&板名
+          db-select-板id&板URL&板名-where-板URL-板名-glob
           db-select-板最終更新日時&板etag
           db-select-板id
           db-select-板URL
@@ -34,6 +35,7 @@
           db-select-スレid&スレファイル-is-not-null
           db-select-スレファイル-is-not-null
           db-select-スレid&スレURL&スレタイ&レス数&スレファイル
+          db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob
           db-select-スレ最終更新日時&スレetag
           db-select-板のスレファイル
           db-delete-板のスレ
@@ -109,6 +111,21 @@
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((result (dbi-do conn "SELECT id, 板URL, 板名 FROM bbsmenu"))
+            (getter (relation-accessor result)))
+       (begin0
+         (map (lambda (row)
+                (list (getter row "id")
+                      (getter row "板URL")
+                      (getter row "板名")))
+              result)
+         (dbi-close result))))))
+
+(define (db-select-板id&板URL&板名-where-板URL-板名-glob word)
+  (log-format "db-select-板id&板URL&板名-where-板URL-板名-glob ~a" word)
+  (call-with-ktkr2-db
+   (lambda (conn)
+     (let* ((glob (string-append "*" word "*"))
+            (result (dbi-do conn "SELECT id, 板URL, 板名 FROM bbsmenu WHERE 板URL GLOB ? OR 板名 GLOB ?" '() glob glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)
@@ -323,6 +340,23 @@
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((result (dbi-do conn "SELECT id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE 板id = ?" '() 板id))
+            (getter (relation-accessor result)))
+       (begin0
+         (map (lambda (row)
+                (list (getter row "id")
+                      (getter row "スレURL")
+                      (getter row "スレタイ")
+                      (getter row "レス数")
+                      (getter row "スレファイル")))
+              result)
+         (dbi-close result))))))
+
+(define (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob 板id word)
+  (log-format "db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob ~a ~a" 板id word)
+  (call-with-ktkr2-db
+   (lambda (conn)
+     (let* ((glob (string-append "*" word "*"))
+            (result (dbi-do conn "SELECT id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE 板id = ? AND (スレURL GLOB ? OR スレタイ GLOB ?)" '() 板id glob glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)

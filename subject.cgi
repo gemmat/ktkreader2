@@ -13,7 +13,7 @@
 (use ktkr2.db)
 
 (define (update-subject 板URL)
-  (or (dry?)
+  (or (cache?)
       (and-let* ((process (run-process `(gosh main.scm ,(string-append "--subject=" 板URL))))
                  ((process-wait process)))
         (zero? (process-exit-status process)))))
@@ -21,7 +21,7 @@
 (define (main args)
   (cgi-main
    (lambda (params)
-     (dry? (cgi-get-parameter "dry" params :default #f :convert (compose positive? x->integer)))
+     (cache? (cgi-get-parameter "cache" params :default #f :convert (compose positive? x->integer)))
      (or (and-let* ((板id (cgi-get-parameter "q" params :default #f :convert x->integer))
                     (p (db-select-板URL&板名 板id))
                     (板URL (car p))
@@ -47,7 +47,9 @@
                             (rescount ,レス数)
                             (key ,(extract-スレキー スレURL))
                             (cache ,(or (and スレファイル 1) 0)))))
-                        (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id)))))
+                        (or (and-let* ((word (cgi-get-parameter "s" params :default #f)))
+                              (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob 板id word))
+                            (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id))))))
              `(ktkreader2
                (@ (type "error"))
                (board

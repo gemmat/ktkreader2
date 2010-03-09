@@ -11,7 +11,7 @@
 (define (main args)
   (cgi-main
    (lambda (params)
-     (dry? (cgi-get-parameter "dry" params :default #f :convert (compose positive? x->integer)))
+     (cache? (cgi-get-parameter "cache" params :default #f :convert (compose positive? x->integer)))
      `(,(cgi-header)
        ,(html-doctype)
        ,(html:html
@@ -30,7 +30,9 @@
                      :href (href-subject 板id)
                      (html:dt (html-escape-string 板名)))
                     (html:dd (html-escape-string 板URL))))))
-                (db-select-板id&板URL&板名)))))
+                (or (and-let* ((word (cgi-get-parameter "s" params :default #f)))
+                      (db-select-板id&板URL&板名-where-板URL-板名-glob word))
+                    (db-select-板id&板URL&板名))))))
        ))))
 
 ;; Local variables:

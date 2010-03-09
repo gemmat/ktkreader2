@@ -13,7 +13,7 @@
 (use ktkr2.db)
 
 (define (update-dat スレURL)
-  (or (dry?)
+  (or (cache?)
       (and-let* ((process (run-process `(gosh main.scm ,(string-append "--dat=" スレURL))))
                  ((process-wait process)))
         (zero? (process-exit-status process)))))
@@ -21,7 +21,7 @@
 (define (main args)
   (cgi-main
    (lambda (params)
-     (dry? (cgi-get-parameter "dry" params :default #f :convert (compose positive? x->integer)))
+     (cache? (cgi-get-parameter "cache" params :default #f :convert (compose positive? x->integer)))
      (or (and-let* ((スレid (cgi-get-parameter "q" params :default #f :convert x->integer))
                     (p (db-select-板id&スレURL&スレタイ&レス数 スレid))
                     (板id (car p))

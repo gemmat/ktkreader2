@@ -22,7 +22,7 @@
           compose-スレURL
           distribute-path
           ktkr2-log-open
-          dry?
+          cache?
           href-bbsmenu
           href-subject
           href-dat
@@ -81,16 +81,16 @@
   (log-open (build-path (current-directory) "log" (path-swap-extension (date->string (current-date) "~b_~d_~y") "log"))
             :prefix "~T:"))
 
-(define dry? (make-parameter #f))
+(define cache? (make-parameter #f))
 
 (define (href-bbsmenu)
-  (string-append "./bbsmenu.cgi" (if (dry?) "?dry=1" "")))
+  (string-append "./bbsmenu.cgi" (if (cache?) "?cache=1" "")))
 
 (define (href-subject 板id)
-  (string-append "./subject.cgi?q=" (x->string 板id) (if (dry?) "&dry=1" "")))
+  (string-append "./subject.cgi?q=" (x->string 板id) (if (cache?) "&cache=1" "")))
 
 (define (href-dat スレid)
-  (string-append "./dat.cgi?q=" (x->string スレid) (if (dry?) "&dry=1" "")))
+  (string-append "./dat.cgi?q=" (x->string スレid) (if (cache?) "&cache=1" "")))
 
 (define (decompose-板URL 板URL)
   (receive (_ _ host _ path _ _) (uri-parse 板URL)

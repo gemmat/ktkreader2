@@ -1,4 +1,5 @@
 var meta = null;
+var dataTable = null;
 
 function formatTitle(elCell, oRecord, oColumn, oData) {
   elCell.innerHTML = ['<a href="',
@@ -40,26 +41,24 @@ function formatCache(elCell, oRecord, oColumn, oData) {
   var d = oRecord.getData();
   if (!d.cache) return;
   elCell.innerHTML = ['<a href="',
-                      'http://localhost/~teruaki/cgi-bin/dat.cgi?dry=1&q=',
+                      'http://localhost/~teruaki/cgi-bin/dat.cgi?cache=1&q=',
                       d.id,
                       '">ｷｬｯｼｭ</a>'].join('');
 }
 
-function parseQuery() {
-  var s = document.location.search;
+function parseQuery(s) {
   var m_q = /q=(\d+)/.exec(s);
   var m_c = /cache=\d+/.test(s);
   if (!m_q) return false;
-  return ["http://localhost/~teruaki/cgi-bin/subject.cgi?q=",
+  return ["q=",
           m_q[1],
-          m_c ? "&dry=1" : ""].join("");
+          m_c ? "&cache=1" : ""].join("");
 }
 
 YAHOO.util.Event.onContentReady("table-container", function() {
-  var url = parseQuery();
-  if (!url) return;
-  var dataSource = new YAHOO.util.XHRDataSource(url);
+  var dataSource = new YAHOO.util.XHRDataSource("http://localhost/~teruaki/cgi-bin/subject.cgi?");
   dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_XML;
+  dataSource.connXhrMode = "queueRequests";
   dataSource.useXPath = true;
   dataSource.responseSchema = {
     metaFields: {
@@ -90,22 +89,36 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     {key: "cache", label: "ｷｬｯｼｭ", formatter: formatCache, sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC }},
     {key: "key", label: "その他", formatter: formatMisc, className: "column-misc"}
   ];
+  var paginator = new YAHOO.widget.Paginator({
+    rowsPerPage: 50,
+    // use a custom layout for pagination controls
+    template: "{PageLinks} {RowsPerPageDropdown} 件ずつ表示",
+    // show all links
+    pageLinks: YAHOO.widget.Paginator.VALUE_UNLIMITED,
+    // use these in the rows-per-page dropdown
+    rowsPerPageOptions: [50, 100, 250, 500, 1000, 2000],
+    // use custom page link labels
+    pageLabelBuilder: function (page,paginator) {
+      var recs = paginator.getPageRecords(page);
+      return (recs[0] + 1) + ' - ' + (recs[1] + 1);
+    }
+  });
   var configs = {
     caption: "スレ一覧",
-    paginator : new YAHOO.widget.Paginator({
-      rowsPerPage: 50,
-      // use a custom layout for pagination controls
-      template: "{PageLinks} {RowsPerPageDropdown} 件ずつ表示",
-      // show all links
-      pageLinks: YAHOO.widget.Paginator.VALUE_UNLIMITED,
-      // use these in the rows-per-page dropdown
-      rowsPerPageOptions: [50, 100, 250, 500, 1000, 2000],
-      // use custom page link labels
-      pageLabelBuilder: function (page,paginator) {
-        var recs = paginator.getPageRecords(page);
-        return (recs[0] + 1) + ' - ' + (recs[1] + 1);
-      }
-    })
+    initialRequest: parseQuery(document.location.search),
+    paginator : paginator
   };
-  var dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
+  dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
 });
+
+function search(elt) {
+  var oCallback = {
+        success : dataTable.onDataReturnReplaceRows,
+        failure : dataTable.onDataReturnReplaceRows,
+        scope   : dataTable,
+        argument: dataTable.getState()
+    };
+  var word = elt.getElementsByClassName('search')[0].value;
+  var query = parseQuery(document.location.search) + "&cache=1&s=" + word;
+  dataTable.getDataSource().sendRequest(query, oCallback);
+}
