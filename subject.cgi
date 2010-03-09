@@ -36,7 +36,7 @@
                     (if (and host path)
                       `((host ,host)
                         (path ,path))
-                      '(())))
+                      '()))
                 (url ,板URL)
                 (subjects
                  ,@(map (match-lambda

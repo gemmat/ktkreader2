@@ -36,25 +36,26 @@
              (board
               (id ,板id)
               (title ,板名)
-              (url ,板URL))
-             (subject
-              (id ,スレid)
-              (title ,スレタイ)
-              (rescount ,レス数)
-              (url ,スレURL))
-             (dat
-              ,@(or (and-let* (((update-dat スレURL))
-                              (スレファイル (db-select-スレファイル-is-not-null スレid))
-                              (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)))
-                     (case (cgi-get-parameter "f" params :default 'xml :convert string->symbol)
-                       ((xml)
-                        (xml-formatter source))
-                       ((dat)
-                        `(,source))
-                       (else
-                        `(,source))
-                       ))
-                   `("error")))))
+              (url ,板URL)
+              (subject
+               (id ,スレid)
+               (title ,スレタイ)
+               (rescount ,レス数)
+               (url ,スレURL)
+               ,(or (and-let* (((update-dat スレURL))
+                               (スレファイル (db-select-スレファイル-is-not-null スレid))
+                               (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)))
+                      (case (cgi-get-parameter "format" params :default 'html :convert string->symbol)
+                        ((xml)
+                         `(dat ,@(xml-formatter source)))
+                        ((html)
+                         `(dat ,(html-formatter source)))
+                        ((dat)
+                         `(dat ,source))
+                        (else
+                         `(dat ,source))
+                        ))
+                    `(dat "error"))))))
          `(ktkreader2 (@ (type "error")) "fatal")))
    :output-proc cgi-output-sxml->xml
    :on-error cgi-on-error

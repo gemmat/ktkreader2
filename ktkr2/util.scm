@@ -8,6 +8,7 @@
   (use text.html-lite)
   (use text.tree)
   (use sxml.serializer)
+  (use sxml.sxpath)
   (use www.cgi)
   (use gauche.charconv)
   (use gauche.process)
@@ -32,7 +33,7 @@
           cgi-output-sxml->xml
           cgi-on-error
           xml-formatter
-          スレURL->元URL
+          html-formatter
   )
 )
 
@@ -182,9 +183,9 @@
         (body ,(regexp-replace-all*
                 (regexp-replace-all #/<a[^>]*>/ body "<a>")
                 #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})(-|～|～|=|＝)(\d{1,4})<\/a>/
-                "<a class='res-ref' href='#\\2'>\\1\\2</a>\\3<a class='res-ref' href='#\\4'>\\4</a>"
+                "<a class='res-ref' href='#res-\\2'>\\1\\2</a>\\3<a class='res-ref' href='#res-\\4'>\\4</a>"
                 #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})<\/a>/
-                "<a class='res-ref' href='#\\2'>\\1\\2</a>"
+                "<a class='res-ref' href='#res-\\2'>\\1\\2</a>"
                 regexp-html
                 (lambda (m)
                   (let* ((s (m 0))
@@ -195,4 +196,38 @@
                     (format #f "<a href='~a'>~a</a>" t s))))))))
   (filter-map res-formatter (string-split source "\n")))
 
+(define (html-formatter source)
+  (define sxp-id        (if-car-sxpath '(id *text*)))
+  (define sxp-name      (if-car-sxpath '(name *text*)))
+  (define sxp-name-trip (if-car-sxpath '(name @ trip *text*)))
+  (define sxp-mail      (if-car-sxpath '(mail *text*)))
+  (define sxp-date      (if-car-sxpath '(date *text*)))
+  (define sxp-date-id   (if-car-sxpath '(date @ id *text*)))
+  (define sxp-body      (if-car-sxpath '(body *text*)))
+  (tree->string
+   (html:div
+    :class "main"
+    (map (lambda (x)
+           (html:div
+            :class "res"
+            :id (string-append "res-" (sxp-id x))
+            (html:div
+             :class "res-header"
+             (html:span
+              :class "res-number"
+              (sxp-id x))
+             (html:span
+              :class "res-name"
+              (sxp-name x))
+             (html:span
+              :class "res-date"
+              ":" (sxp-date x)))
+            (html:div
+             :class "res-content"
+             (html:p
+              :class "rr"
+              (sxp-body x)))))
+         (xml-formatter source)))))
+
 (provide "util")
+

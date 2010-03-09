@@ -12,28 +12,26 @@
   (cgi-main
    (lambda (params)
      (cache? (cgi-get-parameter "cache" params :default #f :convert (compose positive? x->integer)))
-     `(,(cgi-header)
-       ,(html-doctype)
-       ,(html:html
-         (html:head
-          (html:meta :http-equiv "Content-Type" :content "text/html; charset=UTF-8")
-          (html:meta :http-equiv "Content-Script-Type" :content "text/html; charset=UTF-8")
-          (html:title "メニュー"))
-         (html:body
-          (パンくず)
-          (html:ul
-           (map (match-lambda
-                 ((板id 板URL 板名)
-                  (html:li
-                   (html:dl
-                    (html:a
-                     :href (href-subject 板id)
-                     (html:dt (html-escape-string 板名)))
-                    (html:dd (html-escape-string 板URL))))))
-                (or (and-let* ((word (cgi-get-parameter "s" params :default #f)))
-                      (db-select-板id&板URL&板名-where-板URL-板名-glob word))
-                    (db-select-板id&板URL&板名))))))
-       ))))
+     `(ktkreader2
+       (bbsmenu
+        ,@(map (match-lambda
+                 ((板id 板URL 板名 板最終更新日時)
+                  `(board
+                    (id ,板id)
+                    (title ,板名)
+                    ,@(receive (host path) (decompose-板URL 板URL)
+                        (if (and host path)
+                          `((host ,host)
+                            (path ,path))
+                          '()))
+                    (url ,板URL)
+                    (cache ,(or (and 板最終更新日時 1) 0)))))
+               (or (and-let* ((word (cgi-get-parameter "s" params :default #f)))
+                     (db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob word))
+                   (db-select-板id&板URL&板名&板最終更新日時))))))
+   :output-proc cgi-output-sxml->xml
+   :on-error cgi-on-error
+   ))
 
 ;; Local variables:
 ;; mode: inferior-gauche

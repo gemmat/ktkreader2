@@ -14,17 +14,22 @@
     <script src="http://yui.yahooapis.com/2.8.0r4/build/paginator/paginator-min.js"></script>
     <!-- OPTIONAL: Connection Manager (enables XHR for DataSource) -->
     <script src="http://yui.yahooapis.com/2.8.0r4/build/connection/connection-min.js"></script>
-    <script src="subject.js"></script>
-    <title>スレ一覧</title>
+    <script src="util.js" type="text/javascript"></script>
+    <script src="subject.js" type="text/javascript"></script>
+    <title>スレメニュー - ktkreader2</title>
   </head>
   <body class="yui-skin-sam">
-    <form onsubmit="search(this); return false;">
-      <input type="text" class="search"/>
+    <form action="subject.html" method="GET">
+      <input type="hidden" name="q" value="" class="hidden-q"></input>
+      <input type="hidden" name="cache" value="1"></input>
+      <input type="text"   name="s" class="search"></input>
       <input type="submit" value="検索"></input>
     </form>
     <div id="table-container"></div>
-    <form onsubmit="search(this); return false;">
-      <input type="text" class="search"/>
+    <form action="subject.html" method="GET">
+      <input type="hidden" name="q" value="" class="hidden-q"></input>
+      <input type="hidden" name="cache" value="1"></input>
+      <input type="text"   name="s" class="search"></input>
       <input type="submit" value="検索"></input>
     </form>
   </body>

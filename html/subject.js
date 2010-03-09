@@ -3,7 +3,7 @@ var dataTable = null;
 
 function formatTitle(elCell, oRecord, oColumn, oData) {
   elCell.innerHTML = ['<a href="',
-                      'http://localhost/~teruaki/cgi-bin/dat.cgi?q=',
+                      './dat.html?q=',
                       oRecord.getData().id,
                       '">',
                       oData,
@@ -41,18 +41,9 @@ function formatCache(elCell, oRecord, oColumn, oData) {
   var d = oRecord.getData();
   if (!d.cache) return;
   elCell.innerHTML = ['<a href="',
-                      'http://localhost/~teruaki/cgi-bin/dat.cgi?cache=1&q=',
+                      './dat.html?cache=1&q=',
                       d.id,
                       '">ｷｬｯｼｭ</a>'].join('');
-}
-
-function parseQuery(s) {
-  var m_q = /q=(\d+)/.exec(s);
-  var m_c = /cache=\d+/.test(s);
-  if (!m_q) return false;
-  return ["q=",
-          m_q[1],
-          m_c ? "&cache=1" : ""].join("");
 }
 
 YAHOO.util.Event.onContentReady("table-container", function() {
@@ -79,6 +70,7 @@ YAHOO.util.Event.onContentReady("table-container", function() {
   };
   dataSource.doBeforeCallback = function (oRequest, oFullResponse, oParsedResponse) {
     meta = oParsedResponse.meta;
+    document.title = meta.boardTitle + "板 - ktkreader2";
     return oParsedResponse;
   };
   // 各列の設定
@@ -103,22 +95,21 @@ YAHOO.util.Event.onContentReady("table-container", function() {
       return (recs[0] + 1) + ' - ' + (recs[1] + 1);
     }
   });
+  var o = toQueryParams(document.location.search);
+  if (o.s) {
+    var arr = document.getElementsByClassName("search");
+    arr[0].value = o.s;
+    arr[1].value = o.s;
+  }
+  if (o.q) {
+    var arr = document.getElementsByClassName("hidden-q");
+    arr[0].value = o.q;
+    arr[1].value = o.q;
+  }
   var configs = {
-    caption: "スレ一覧",
-    initialRequest: parseQuery(document.location.search),
+    caption: "スレメニュー",
+    initialRequest: toQueryString({q: o.q, cache: o.cache, s: o.s}),
     paginator : paginator
   };
   dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
 });
-
-function search(elt) {
-  var oCallback = {
-        success : dataTable.onDataReturnReplaceRows,
-        failure : dataTable.onDataReturnReplaceRows,
-        scope   : dataTable,
-        argument: dataTable.getState()
-    };
-  var word = elt.getElementsByClassName('search')[0].value;
-  var query = parseQuery(document.location.search) + "&cache=1&s=" + word;
-  dataTable.getDataSource().sendRequest(query, oCallback);
-}

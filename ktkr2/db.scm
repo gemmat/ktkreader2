@@ -13,8 +13,8 @@
           db-create-table-subject
           db-drop-table-bbsmenu
           db-drop-table-subject
-          db-select-板id&板URL&板名
-          db-select-板id&板URL&板名-where-板URL-板名-glob
+          db-select-板id&板URL&板名&板最終更新日時
+          db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob
           db-select-板最終更新日時&板etag
           db-select-板id
           db-select-板URL
@@ -106,32 +106,34 @@
    (lambda (conn)
      (dbi-do conn "DROP TABLE subject"))))
 
-(define (db-select-板id&板URL&板名)
-  (log-format "db-select-板id&板URL&板名")
+(define (db-select-板id&板URL&板名&板最終更新日時)
+  (log-format "db-select-板id&板URL&板名&板最終更新日時")
   (call-with-ktkr2-db
    (lambda (conn)
-     (let* ((result (dbi-do conn "SELECT id, 板URL, 板名 FROM bbsmenu"))
+     (let* ((result (dbi-do conn "SELECT id, 板URL, 板名, 板最終更新日時 FROM bbsmenu"))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)
                 (list (getter row "id")
                       (getter row "板URL")
-                      (getter row "板名")))
+                      (getter row "板名")
+                      (getter row "板最終更新日時")))
               result)
          (dbi-close result))))))
 
-(define (db-select-板id&板URL&板名-where-板URL-板名-glob word)
-  (log-format "db-select-板id&板URL&板名-where-板URL-板名-glob ~a" word)
+(define (db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob word)
+  (log-format "db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob ~a" word)
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((glob (string-append "*" word "*"))
-            (result (dbi-do conn "SELECT id, 板URL, 板名 FROM bbsmenu WHERE 板URL GLOB ? OR 板名 GLOB ?" '() glob glob))
+            (result (dbi-do conn "SELECT id, 板URL, 板名, 板最終更新日時 FROM bbsmenu WHERE 板URL GLOB ? OR 板名 GLOB ?" '() glob glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)
                 (list (getter row "id")
                       (getter row "板URL")
-                      (getter row "板名")))
+                      (getter row "板名")
+                      (getter row "板最終更新日時")))
               result)
          (dbi-close result))))))
 
@@ -245,7 +247,7 @@
   (log-format "db-insert-update-スレs-from-subject-text length: ~a ~a ~a" (length body) 板id 板URL)
   (call-with-ktkr2-db-transaction
    (lambda (conn)
-     (dbi-do conn "CREATE TEMPORARY TABLE subject_new (板id, スレURL, スレタイ, レス数)")
+     (dbi-do conn "CREATE TEMP TABLE subject_new (id INTEGER PRIMARY KEY, 板id, スレURL, スレタイ, レス数)")
      (let1 query (dbi-prepare conn "INSERT INTO subject_new (板id, スレURL, スレタイ, レス数) VALUES (?, ?, ?, ?)")
        (for-each (lambda (x)
                    (rxmatch-if (#/^(\d+\.dat)\<\>(.+)\s\((\d+)\)$/ x)
@@ -256,7 +258,7 @@
                  body)
        (dbi-close query))
      (dbi-do conn "DELETE FROM subject WHERE スレURL IN (SELECT スレURL from subject WHERE 板id = ? AND スレファイル IS NULL EXCEPT SELECT スレURL from subject_new)" '() 板id)
-     (dbi-do conn "UPDATE subject SET レス数 = (SELECT レス数 FROM subject_new WHERE subject.スレURL = subject_new.スレURL) WHERE スレURL IN (SELECT スレURL FROM subject WHERE 板id = ? INTERSECT SELECT スレURL FROM subject_new)" '() 板id)
+     (dbi-do conn "UPDATE subject SET レス数 = (SELECT レス数 FROM subject_new WHERE subject.板id = ? AND subject.スレURL = subject_new.スレURL) WHERE スレURL IN (SELECT スレURL FROM subject WHERE 板id = ? INTERSECT SELECT スレURL FROM subject_new)" '() 板id 板id)
      (dbi-do conn "INSERT OR IGNORE INTO subject (板id, スレURL, スレタイ, レス数) SELECT 板id, スレURL, スレタイ, レス数 FROM subject_new"))))
 
 (define (db-update-スレファイル スレid スレファイル)
