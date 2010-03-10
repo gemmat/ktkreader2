@@ -44,12 +44,19 @@
                (url ,スレURL)
                ,(if (update-dat スレURL)
                   (or (and-let* ((スレファイル (db-select-スレファイル-is-not-null スレid))
-                                 (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)))
-                        (case (cgi-get-parameter "format" params :default 'html :convert string->symbol)
+                                 (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))
+                                 (fmt    (cgi-get-parameter "format" params :default 'html :convert string->symbol))
+                                 (srt    (cgi-get-parameter "sort"   params :default 0     :convert x->integer)))
+                        (case fmt
                           ((xml)
-                           `(dat ,@(xml-formatter source)))
+                           (if (positive? srt)
+                             (sort-res (xml-formatter source))
+                             (xml-formatter source)))
                           ((html)
-                           `(dat ,(html-formatter source)))
+                           (html-formatter
+                            (if (positive? srt)
+                              (sort-res (xml-formatter source))
+                              (xml-formatter source))))
                           ((dat)
                            `(dat ,source))
                           (else

@@ -10,7 +10,8 @@ function formatTitle(elCell, oRecord, oColumn, oData) {
                       toQueryString(o),
                       '">',
                       oData,
-                      '</a>'].join('');
+                      '</a>'
+                      ].join('');
 
 }
 
@@ -49,7 +50,8 @@ function formatCache(elCell, oRecord, oColumn, oData) {
   elCell.innerHTML = ['<a href="',
                       './dat.html?',
                       toQueryString(o),
-                      '">ｷｬｯｼｭ</a>'].join('');
+                      '">ｷｬｯｼｭ</a>'
+                     ].join('');
 }
 
 YAHOO.util.Event.onContentReady("table-container", function() {

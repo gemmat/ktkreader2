@@ -29,11 +29,11 @@
           href-dat
           decompose-板URL
           extract-スレキー
-          パンくず
           cgi-output-sxml->xml
           cgi-on-error
           xml-formatter
           html-formatter
+          sort-res
   )
 )
 
@@ -105,28 +105,6 @@
          (receive (_ f _) (decompose-path スレURL)
            f))))
 
-(define (パンくず . args)
-  (let-optionals* args ((板id #f)
-                        (板名 #f)
-                        (スレid #f)
-                        (スレタイ #f)
-                        (レス数 #f))
-    (html:h2
-     (html:a :href (href-bbsmenu) "メニュー")
-     (if (and 板id 板名)
-       `(" >> "
-         ,(html:a
-           :href (href-subject 板id)
-           (html:span :class "board-title" (html-escape-string 板名)))
-         ,(if (and スレid スレタイ レス数)
-            `(" >> "
-              ,(html:a
-                :href (href-dat スレid)
-                (html:span :class "thread-title" (html-escape-string スレタイ))
-                (html:span :class "thread-res"   "(" レス数 ")")))
-            '()))
-       '()))))
-
 ;; SXMLをXMLに変換してCGIの出力にする
 (define (cgi-output-sxml->xml sxml)
   (write-tree `(,(cgi-header :content-type "text/xml")))
@@ -161,19 +139,19 @@
 (define (xml-formatter source)
   (define c 0)
   (define (res-formatter line)
+    (define ref-list '()) ;;quasi-quoteの評価順序は決まってるんだっけ?
     (inc! c)
-    (and-let* ((c (x->string c))
-               (l (string-split line "<>"))
+    (and-let* ((l (string-split line "<>"))
                (name  (list-ref l 0 #f))
                (mail  (list-ref l 1 #f))
                (date  (list-ref l 2 #f))
                (body  (list-ref l 3 #f))
                (title (list-ref l 4 "")))
       `(res
-        (id ,c)
+        (id ,(x->string c))
         ,(rxmatch-if (#/<\/b>([^<]*)<b>/ name)
              (#f trip)
-             `(name (@ (trip ,trip)) ,name)
+             `(name (@ (trip ,trip)) ,(regexp-replace-all #/<\/b>|<b>/ name ""))
              `(name ,name))
         (mail ,(html-escape-string mail))
         ,(rxmatch-if (#/\sID:(.+)/ date)
@@ -183,9 +161,14 @@
         (body ,(regexp-replace-all*
                 (regexp-replace-all #/<a[^>]*>/ body "<a>")
                 #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})(-|～|～|=|＝)(\d{1,4})<\/a>/
-                "<a class='res-ref' href='#res-\\2'>\\1\\2</a>\\3<a class='res-ref' href='#res-\\4'>\\4</a>"
+                (lambda (m)
+                  (push! ref-list (m 2))
+                  (push! ref-list (m 4))
+                  (format #f "<a class='res-ref' href='#res-~a'>~a~a</a>~a<a class='res-ref' href='#res-~a'>~a</a>" (m 2) (m 1) (m 2) (m 3) (m 4) (m 4)))
                 #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})<\/a>/
-                "<a class='res-ref' href='#res-\\2'>\\1\\2</a>"
+                (lambda (m)
+                  (push! ref-list (m 2))
+                  (format #f "<a class='res-ref' href='#res-~a'>~a~a</a>" (m 2) (m 1) (m 2)))
                 regexp-html
                 (lambda (m)
                   (let* ((s (m 0))
@@ -193,41 +176,142 @@
                                 (#f)
                                 (string-append "h" s)
                                 s)))
-                    (format #f "<a href='~a'>~a</a>" t s))))))))
-  (filter-map res-formatter (string-split source "\n")))
+                    (format #f "<a href='~a'>~a</a>" t s)))))
+        (ref ,(string-join (reverse ref-list) ",")))))
+  `(dat ,@(filter-map res-formatter (string-split source "\n"))))
 
-(define (html-formatter source)
-  (define sxp-id        (if-car-sxpath '(id *text*)))
-  (define sxp-name      (if-car-sxpath '(name *text*)))
-  (define sxp-name-trip (if-car-sxpath '(name @ trip *text*)))
-  (define sxp-mail      (if-car-sxpath '(mail *text*)))
-  (define sxp-date      (if-car-sxpath '(date *text*)))
-  (define sxp-date-id   (if-car-sxpath '(date @ id *text*)))
-  (define sxp-body      (if-car-sxpath '(body *text*)))
-  (tree->string
-   (html:div
-    :class "main"
-    (map (lambda (x)
-           (html:div
-            :class "res"
-            :id (string-append "res-" (sxp-id x))
-            (html:div
-             :class "res-header"
-             (html:span
-              :class "res-number"
-              (sxp-id x))
-             (html:span
-              :class "res-name"
-              (sxp-name x))
-             (html:span
-              :class "res-date"
-              ":" (sxp-date x)))
-            (html:div
-             :class "res-content"
-             (html:p
-              :class "rr"
-              (sxp-body x)))))
-         (xml-formatter source)))))
+(define (html-formatter dat-sxml)
+  (define (null-or-car-sxpath p)
+    (lambda (x)
+      (or ((if-car-sxpath p) x) "")))
+  (define sxp-id        (null-or-car-sxpath '(id *text*)))
+  (define sxp-name      (null-or-car-sxpath '(name *text*)))
+  (define sxp-name-trip (null-or-car-sxpath '(name @ trip *text*)))
+  (define sxp-mail      (null-or-car-sxpath '(mail *text*)))
+  (define sxp-date      (null-or-car-sxpath '(date *text*)))
+  (define sxp-date-id   (null-or-car-sxpath '(date @ id *text*)))
+  (define sxp-body      (null-or-car-sxpath '(body *text*)))
+  `(dat
+    ,(tree->string
+      (html:div
+       :class "main"
+       (map (lambda (x)
+              (html:div
+               :class "res"
+               :id (string-append "res-" (sxp-id x))
+               (html:div
+                :class "res-header"
+                (html:span
+                 :class "res-number"
+                 (sxp-id x))
+                (html:span
+                 :class "res-name nm"
+                 (sxp-name x))
+                (html:span
+                 :class "res-date"
+                 ":" (sxp-date x)))
+               (html:div
+                :class "res-content"
+                (html:p
+                 :class "rr"
+                 (sxp-body x)))))
+            ((sxpath '(res)) dat-sxml))))))
+
+;;木の統合
+;;http://practical-scheme.net/wiliki/wiliki.cgi?Scheme%3aリスト処理
+(define (tree-merge relations)
+  (define (pick node trees relations)
+    (receive (picked rest)
+        (partition (lambda (r) (eq? node (car r))) relations)
+      (if (null? picked)
+        (receive (subtree other-trees)
+            (partition (lambda (t) (eq? node (car t))) trees)
+          (if (null? subtree)
+            (values (list node) trees relations)
+            (values (car subtree) other-trees relations)))
+        (receive (subtrees trees relations)
+            (merge-fold (cdar picked) '() trees rest)
+          (values (cons node subtrees) trees relations)))))
+
+  (define (merge-fold kids subtrees trees relations)
+    (if (null? kids)
+      (values (reverse subtrees) trees relations)
+      (receive (subtree trees relations) (pick (car kids) trees relations)
+        (merge-fold (cdr kids) (cons subtree subtrees) trees relations))))
+
+  (define (merge trees relations)
+    (if (null? relations)
+      trees
+      (receive (subtree trees relations)
+          (pick (caar relations) trees relations)
+        (merge (cons subtree trees) relations))))
+  (merge '() relations))
+
+(define (flatten xs)
+  (if (pair? xs)
+    (append-map flatten xs)
+    (list xs)))
+
+(define (sort-res dat-sxml)
+  (define res-table (make-hash-table 'eq?))
+  (define (extract-relations res-list)
+    (define (extract res-list)
+      (filter-map (lambda (res)
+                    (and-let* ((str  ((if-car-sxpath '(id *text*)) res))
+                               (id   (string->number str)))
+                      (hash-table-put! res-table id res)
+                      (or (and-let* ((str ((if-car-sxpath '(ref *text*)) res))
+                                     ((not (string=? str "")))
+                                     (refs (map string->number (string-split str ","))))
+                            (cons id (delete id refs)))
+                          (list id))))
+                  res-list))
+    (define (merge refs)
+      (define ht (make-hash-table 'eq?))
+      (for-each (lambda (l)
+                  (hash-table-update! ht (apply min l) (cut append <> l) '()))
+                refs)
+      (sort-by
+       (hash-table-map ht (lambda (key value)
+                            (cons key (sort (delete-duplicates (delete key value) eq?)))))
+       car))
+    (define (remove-multipule-parents refs)
+      (define ht (make-hash-table 'eq?))
+      (map (lambda (l)
+             (cons (car l)
+                   (remove (lambda (x)
+                             (if (hash-table-exists? ht x)
+                               #t
+                               (begin
+                                 (hash-table-put! ht x #t)
+                                 #f)))
+                           (cdr l))))
+           refs))
+    (remove-multipule-parents (merge (extract res-list))))
+  `(dat
+    ,@(map (cut hash-table-get res-table <>)
+           (flatten (reverse (tree-merge (extract-relations ((sxpath '(res)) dat-sxml))))))))
+
+;; (and-let* ((スレファイル "../aaaa")
+;;            (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)))
+;;   (sort-res (xml-formatter source)))
+
+;; (merge '((56 59) (57) (58 63 64) (60) (61) (62) (64 68) (65 68 70) (66) (67) (69) (71)))
+
+;; (tree-merge '((56 59)
+;;               (57)
+;;               (58 63 64)
+;;               (60)
+;;               (61)
+;;               (62)
+;;               (64 68)
+;;               (65 70)
+;;               (66)
+;;               (67)
+;;               (69)
+;;               (71)))
+
+
 
 (provide "util")
 
