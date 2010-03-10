@@ -22,7 +22,7 @@
   (cgi-main
    (lambda (params)
      (cache? (cgi-get-parameter "cache" params :default #f :convert (compose positive? x->integer)))
-     (or (and-let* ((板id (cgi-get-parameter "q" params :default #f :convert x->integer))
+     (or (and-let* ((板id (cgi-get-parameter "sq" params :default #f :convert x->integer))
                     (p (db-select-板URL&板名 板id))
                     (板URL (car p))
                     (板名  (cdr p)))
@@ -47,8 +47,8 @@
                             (rescount ,レス数)
                             (key ,(extract-スレキー スレURL))
                             (cache ,(or (and スレファイル 1) 0)))))
-                        (or (and-let* ((word (cgi-get-parameter "s" params :default #f)))
-                              (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob 板id word))
+                        (or (and-let* ((word (cgi-get-parameter "ss" params :default #f)))
+                              (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob 板id word))
                             (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id))))))
              `(ktkreader2
                (@ (type "error"))

@@ -4,7 +4,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta http-equiv="Content-Script-Type" content="text/html; charset=UTF-8" />
-    <link type="text/css" href="subject.css" rel="stylesheet" />
+    <link type="text/css" href="bbsmenu.css" rel="stylesheet" />
     <link type="text/css" rel="stylesheet" href="./yui/build/datatable/assets/skins/sam/datatable.css"/>
     <link rel="stylesheet" type="text/css" href="./yui/build/paginator/assets/skins/sam/paginator.css">
     <script src="./yui/build/yahoo-dom-event/yahoo-dom-event.js"></script>
@@ -15,26 +15,21 @@
     <!-- OPTIONAL: Connection Manager (enables XHR for DataSource) -->
     <script src="./yui/build/connection/connection-min.js"></script>
     <script src="util.js" type="text/javascript"></script>
-    <script src="subject.js" type="text/javascript"></script>
-    <title>○○板 - ktkreader2</title>
+    <script src="bbsmenu.js"></script>
+    <title>メニュー - ktkreader2</title>
   </head>
   <body class="yui-skin-sam">
-    <div id="breadcrumbs">
-      <a id="breadcrumbs-bbsmenu" href="./bbsmenu.html?cache=1">メニュー</a>
-    </div>
-    <form action="subject.html" method="GET">
+    <form action="bbsmenu.html" method="GET">
       <input type="hidden" name="cache" value="1"></input>
-      <input type="hidden" name="sq" value="" class="sq"></input>
-      <input type="hidden" name="bs" value="" class="bs"></input>
-      <input type="text"   name="ss" class="ss"></input>
+      <input type="hidden" name="ss" class="ss"></input>
+      <input type="text"   name="bs" class="bs"></input>
       <input type="submit" value="検索"></input>
     </form>
     <div id="table-container"></div>
-    <form action="subject.html" method="GET">
+    <form action="bbsmenu.html" method="GET">
       <input type="hidden" name="cache" value="1"></input>
-      <input type="hidden" name="sq" value="" class="sq"></input>
-      <input type="hidden" name="bs" value="" class="bs"></input>
-      <input type="text"   name="ss" class="ss"></input>
+      <input type="hidden" name="ss" class="ss"></input>
+      <input type="text"   name="bs" class="bs"></input>
       <input type="submit" value="検索"></input>
     </form>
   </body>

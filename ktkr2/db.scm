@@ -35,7 +35,7 @@
           db-select-スレid&スレファイル-is-not-null
           db-select-スレファイル-is-not-null
           db-select-スレid&スレURL&スレタイ&レス数&スレファイル
-          db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob
+          db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob
           db-select-スレ最終更新日時&スレetag
           db-select-板のスレファイル
           db-delete-板のスレ
@@ -353,12 +353,12 @@
               result)
          (dbi-close result))))))
 
-(define (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob 板id word)
-  (log-format "db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレURL-スレタイ-glob ~a ~a" 板id word)
+(define (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob 板id word)
+  (log-format "db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob ~a ~a" 板id word)
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((glob (string-append "*" word "*"))
-            (result (dbi-do conn "SELECT id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE 板id = ? AND (スレURL GLOB ? OR スレタイ GLOB ?)" '() 板id glob glob))
+            (result (dbi-do conn "SELECT id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE 板id = ? AND スレタイ GLOB ?" '() 板id glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)

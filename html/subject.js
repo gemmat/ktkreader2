@@ -2,9 +2,12 @@ var meta = null;
 var dataTable = null;
 
 function formatTitle(elCell, oRecord, oColumn, oData) {
+  var o = toQueryParams(document.location.search);
+  o.dq = oRecord.getData().id;
+  o.cache = false;
   elCell.innerHTML = ['<a href="',
-                      './dat.html?q=',
-                      oRecord.getData().id,
+                      './dat.html?',
+                      toQueryString(o),
                       '">',
                       oData,
                       '</a>'].join('');
@@ -22,7 +25,7 @@ function formatMisc(elCell, oRecord, oColumn, oData) {
              '/'].join('');
   elCell.innerHTML = ['<a href="',
                       url,
-                      '"><img class="misc-icon" src="go-to-small.gif" title="元URL" alt="元URL"/></a> ',
+                      '"><img class="misc-icon" src="go-to-small.gif" title="元スレ" alt="元スレ"/></a> ',
                       '<a href="',
                       'http://2ch2rss.dip.jp/rss.xml?url=',
                       url,
@@ -40,9 +43,12 @@ function formatMisc(elCell, oRecord, oColumn, oData) {
 function formatCache(elCell, oRecord, oColumn, oData) {
   var d = oRecord.getData();
   if (!d.cache) return;
+  var o = toQueryParams(document.location.search);
+  o.cache = 1;
+  o.dq = d.id;
   elCell.innerHTML = ['<a href="',
-                      './dat.html?cache=1&q=',
-                      d.id,
+                      './dat.html?',
+                      toQueryString(o),
                       '">ｷｬｯｼｭ</a>'].join('');
 }
 
@@ -69,8 +75,11 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     ]
   };
   dataSource.doBeforeCallback = function (oRequest, oFullResponse, oParsedResponse) {
+    var o = toQueryParams(document.location.search);
     meta = oParsedResponse.meta;
-    document.title = meta.boardTitle + "板 - ktkreader2";
+    document.title = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "") + " - ktkreader2";
+    YAHOO.util.Dom.get("table-container").
+      getElementsByTagName("caption")[0].textContent = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "");
     return oParsedResponse;
   };
   // 各列の設定
@@ -82,13 +91,13 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     {key: "key", label: "その他", formatter: formatMisc, className: "column-misc"}
   ];
   var paginator = new YAHOO.widget.Paginator({
-    rowsPerPage: 50,
+    rowsPerPage: 20,
     // use a custom layout for pagination controls
     template: "{PageLinks} {RowsPerPageDropdown} 件ずつ表示",
     // show all links
     pageLinks: YAHOO.widget.Paginator.VALUE_UNLIMITED,
     // use these in the rows-per-page dropdown
-    rowsPerPageOptions: [50, 100, 250, 500, 1000, 2000],
+    rowsPerPageOptions: [20, 50, 100, 250, 500, 1000, 2000],
     // use custom page link labels
     pageLabelBuilder: function (page,paginator) {
       var recs = paginator.getPageRecords(page);
@@ -96,20 +105,23 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     }
   });
   var o = toQueryParams(document.location.search);
-  if (o.s) {
-    var arr = document.getElementsByClassName("search");
-    arr[0].value = o.s;
-    arr[1].value = o.s;
-  }
-  if (o.q) {
-    var arr = document.getElementsByClassName("hidden-q");
-    arr[0].value = o.q;
-    arr[1].value = o.q;
-  }
   var configs = {
-    caption: "スレメニュー",
-    initialRequest: toQueryString({q: o.q, cache: o.cache, s: o.s}),
+    caption: "○○板",
+    initialRequest: toQueryString(o),
     paginator : paginator
   };
   dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
+
+  forEach(["sq", "bs", "ss"], function(x) {
+    if (!o[x]) return;
+    var arr = document.getElementsByClassName(x);
+    arr[0].value = o[x];
+    arr[1].value = o[x];
+  });
+  o.cache = 1;
+  o.sq = false;
+  o.dq = false;
+  var elt = YAHOO.util.Dom.get("breadcrumbs-bbsmenu");
+  elt.setAttribute("href", "./bbsmenu.html?" + toQueryString(o));
+  elt.textContent = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");
 });

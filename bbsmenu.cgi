@@ -26,7 +26,7 @@
                           '()))
                     (url ,板URL)
                     (cache ,(or (and 板最終更新日時 1) 0)))))
-               (or (and-let* ((word (cgi-get-parameter "s" params :default #f)))
+               (or (and-let* ((word (cgi-get-parameter "bs" params :default #f)))
                      (db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob word))
                    (db-select-板id&板URL&板名&板最終更新日時))))))
    :output-proc cgi-output-sxml->xml

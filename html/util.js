@@ -23,3 +23,9 @@ function toQueryString(aObject) {
   }
   return results.join('&');
 }
+
+function forEach(aArray, aProc) {
+  for (var i = 0, len = aArray.length; i < len; i++) {
+    aProc(aArray[i]);
+  }
+}

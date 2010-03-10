@@ -1,9 +1,14 @@
 var dataTable = null;
 
 function formatTitle(elCell, oRecord, oColumn, oData) {
+  var o = toQueryParams(document.location.search);
+  o.cache = false;
+  o.sq = oRecord.getData().id;
+  o.dq = false;
+  o.ss = false;
   elCell.innerHTML = ['<a href="',
-                      './subject.html?q=',
-                      oRecord.getData().id,
+                      './subject.html?',
+                      toQueryString(o),
                       '">',
                       oData,
                       '</a>'].join('');
@@ -12,9 +17,14 @@ function formatTitle(elCell, oRecord, oColumn, oData) {
 
 function formatCache(elCell, oRecord, oColumn, oData) {
   if (oData == "0") return;
+  var o = toQueryParams(document.location.search);
+  o.cache = 1;
+  o.sq = oRecord.getData().id;
+  o.dq = false;
+  o.ss = false;
   elCell.innerHTML = ['<a href="',
-                      './subject.html?cache=1&q=',
-                      oRecord.getData().id,
+                      './subject.html?',
+                      toQueryString(o),
                       '">',
                       'ｷｬｯｼｭ',
                       '</a>'].join('');
@@ -41,18 +51,35 @@ YAHOO.util.Event.onContentReady("table-container", function() {
   var columns = [
     //{key: "id", label: "ID", sortable: true},
     {key: "title", label: "板名", formatter: formatTitle, sortable: true, resizable: true},
-    {key: "cache", label: "ｷｬｯｼｭ", formatter: formatCache, sortable: true}
+    {key: "cache", label: "ｷｬｯｼｭ", formatter: formatCache, sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC }}
   ];
+  var paginator = new YAHOO.widget.Paginator({
+    rowsPerPage: 20,
+    // use a custom layout for pagination controls
+    template: "{PageLinks} {RowsPerPageDropdown} 件ずつ表示",
+    // show all links
+    pageLinks: YAHOO.widget.Paginator.VALUE_UNLIMITED,
+    // use these in the rows-per-page dropdown
+    rowsPerPageOptions: [20, 50, 100, 250, 500, 1000],
+    // use custom page link labels
+    pageLabelBuilder: function (page,paginator) {
+      var recs = paginator.getPageRecords(page);
+      return (recs[0] + 1) + ' - ' + (recs[1] + 1);
+    }
+  });
   var o = toQueryParams(document.location.search);
-  if (o.s) {
-    var arr = document.getElementsByClassName("search");
-    arr[0].value = o.s;
-    arr[1].value = o.s;
-  }
+  o.dq = false;
+  o.sq = false;
+  o.ss = false;
   var configs = {
-    caption: "板メニュー",
-    initialRequest: toQueryString({cache: o.cache, s: o.s}),
-    renderLoopSize: 25
+    caption: "メニュー",
+    initialRequest: toQueryString(o),
+    paginator: paginator
+  };
+  if (o["bs"]) {
+    var arr = document.getElementsByClassName("bs");
+    arr[0].value = o["bs"];
+    arr[1].value = o["bs"];
   };
   dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
 });
