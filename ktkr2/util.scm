@@ -160,15 +160,42 @@
              `(date ,date))
         (body ,(regexp-replace-all*
                 (regexp-replace-all #/<a[^>]*>/ body "<a>")
-                #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})(-|～|～|=|＝)(\d{1,4})<\/a>/
+                #/<a>&gt\;&gt\;(\d{1,4})-(\d{1,4})<\/a>/
                 (lambda (m)
-                  (push! ref-list (m 2))
-                  (push! ref-list (m 4))
-                  (format #f "<a class='res-ref' href='#res-~a'>~a~a</a>~a<a class='res-ref' href='#res-~a'>~a</a>" (m 2) (m 1) (m 2) (m 3) (m 4) (m 4)))
-                #/<a>(&gt\;&gt\;|&gt\;|＞＞|＞)(\d{1,4})<\/a>/
+                  (let ((ref0 (string->number (m 1)))
+                        (ref1 (string->number (m 2))))
+                    (if (and (< ref0 1050) (< ref1 1050))
+                      (begin
+                        (push! ref-list ref0)
+                        (push! ref-list ref1)
+                        (format #f "<a class='res-ref' href='#res-~a'>&gt;&gt;~a</a>-<a class='res-ref' href='#res-~a'>~a</a>" ref0 ref0 ref1 ref1))
+                      (m 0))))
+                #/(&gt\;|＞＞|＞)(\d{1,4})(-|～|～|=|＝|,|、)(\d{1,4})(?=[^<'\d])/
                 (lambda (m)
-                  (push! ref-list (m 2))
-                  (format #f "<a class='res-ref' href='#res-~a'>~a~a</a>" (m 2) (m 1) (m 2)))
+                  (let ((ref0 (string->number (m 2)))
+                        (ref1 (string->number (m 4))))
+                    (if (and (< ref0 1050) (< ref1 1050))
+                      (begin
+                        (push! ref-list ref0)
+                        (push! ref-list ref1)
+                        (format #f "<a class='res-ref' href='#res-~a'>~a~a</a>~a<a class='res-ref' href='#res-~a'>~a</a>" ref0 (m 1) ref0 (m 3) ref1 ref1))
+                      (m 0))))
+                #/<a>&gt\;&gt\;(\d{1,4})<\/a>/
+                (lambda (m)
+                  (let ((ref0 (string->number (m 1))))
+                    (if (< ref0 1050)
+                      (begin
+                        (push! ref-list ref0)
+                        (format #f "<a class='res-ref' href='#res-~a'>&gt;&gt;~a</a>" ref0 ref0))
+                      (m 0))))
+                #/(&gt\;|＞＞|＞|,|-)(\d{1,4})(?=[^<'\d])/
+                (lambda (m)
+                  (let ((ref0 (string->number (m 2))))
+                    (if (< ref0 1050)
+                      (begin
+                        (push! ref-list ref0)
+                        (format #f "<a class='res-ref' href='#res-~a'>~a~a</a>" ref0 (m 1) ref0))
+                      (m 0))))
                 regexp-html
                 (lambda (m)
                   (let* ((s (m 0))
@@ -177,7 +204,7 @@
                                 (string-append "h" s)
                                 s)))
                     (format #f "<a href='~a'>~a</a>" t s)))))
-        (ref ,(string-join (reverse ref-list) ",")))))
+        (ref ,(string-join (map x->string (reverse ref-list)) ",")))))
   `(dat ,@(filter-map res-formatter (string-split source "\n"))))
 
 (define (html-formatter dat-sxml)
@@ -262,8 +289,10 @@
                       (hash-table-put! res-table id res)
                       (or (and-let* ((str ((if-car-sxpath '(ref *text*)) res))
                                      ((not (string=? str "")))
-                                     (refs (map string->number (string-split str ","))))
-                            (cons id (delete id refs)))
+                                     (refs (delete id (map string->number (string-split str ",")))))
+                            (cons id (if (< 1 (length refs))
+                                       (delete 1 refs)
+                                       refs)))
                           (list id))))
                   res-list))
     (define (merge refs)
@@ -289,7 +318,7 @@
            refs))
     (remove-multipule-parents (merge (extract res-list))))
   `(dat
-    ,@(map (cut hash-table-get res-table <>)
+    ,@(map (cut hash-table-get res-table <> '())
            (flatten (reverse (tree-merge (extract-relations ((sxpath '(res)) dat-sxml))))))))
 
 ;; (and-let* ((スレファイル "../aaaa")
@@ -311,7 +340,4 @@
 ;;               (69)
 ;;               (71)))
 
-
-
 (provide "util")
-

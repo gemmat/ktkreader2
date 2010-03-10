@@ -120,7 +120,7 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     arr[0].value = o[x];
     arr[1].value = o[x];
   });
-  o.cache = 1;
+  o.cache = false;
   o.sq = false;
   o.dq = false;
   var elt = YAHOO.util.Dom.get("breadcrumbs-bbsmenu");
