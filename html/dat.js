@@ -1,3 +1,7 @@
+function edit(aId, aCmd) {
+  $("res-content-p-" + aId).setAttribute("class", aCmd);
+}
+
 function showResponse(req) {
 	//put returned XML in the textarea
   var xmlData = req.responseXML;
@@ -25,23 +29,36 @@ function showResponse(req) {
   elt = $("breadcrumbs-subject");
   elt.setAttribute("href", "./subject.html?" + o.toQueryString());
   elt.textContent = arr_title[0].textContent + "板" + (o.get("ss") ? "(" + o.get("ss") + ")" : "");
-  o.unset("sq");
-  elt = $("breadcrumbs-bbsmenu");
-  elt.setAttribute("href", "./bbsmenu.html?" + o.toQueryString());
-  elt.textContent = "メニュー" + (o.get("bs") ? "(" + o.get("bs") + ")" : "");
   $("thread-title").textContent = arr_title[1].textContent;
 }
 
 function main(evt) {
-  var o = document.location.search.toQueryParams();
-  o.format = "html";
+  var o = $H(document.location.search.toQueryParams());
+  o.set("format", "html");
 	var myAjax = new Ajax.Request(
     "http://localhost/~teruaki/cgi-bin/dat.cgi",
 		{
 			method: 'get',
-			parameters: Object.toQueryString(o),
+			parameters: o.toQueryString(),
 			onComplete: showResponse
 		});
+  o.set("cache",1);
+  var elt = $("sort-dat");
+  if (!o.get("sort")) {
+    o.set("sort", 1);
+    elt.setAttribute("href", "./dat.html?" + o.toQueryString());
+    elt.textContent = "レスを並びかえる";
+    o.unset("sort");
+  } else {
+    o.unset("sort");
+    elt.setAttribute("href", "./dat.html?" + o.toQueryString());
+    elt.textContent = "ふつうに並びかえる";
+    o.set("sort", 1);
+  }
+  o.unset("sq");
+  elt = $("breadcrumbs-bbsmenu");
+  elt.setAttribute("href", "./bbsmenu.html?" + o.toQueryString());
+  elt.textContent = "メニュー" + (o.get("bs") ? "(" + o.get("bs") + ")" : "");
 }
 
 Event.observe(window, "load", main);

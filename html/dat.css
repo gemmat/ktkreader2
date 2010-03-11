@@ -10,6 +10,7 @@
     font-weight:normal;
     line-height:110%;
     text-align:left;
+    width: 800px;
 }
 
 .rr {
@@ -27,7 +28,7 @@
     font-size:14px;
     font-weight:bold;
     line-height:160%;
-    margin:0 0 0 20px;
+    margin:0 0 0px 20px;
     padding-right:100px;
     text-align:left;
 }
@@ -47,7 +48,7 @@
     font-size:16px;
     font-weight:bold;
     line-height:160%;
-    margin:0 0 0 20px;
+    margin:0 0 0px 20px;
     padding-right:100px;
     text-align:left;
 }
@@ -76,20 +77,6 @@
     margin:0 0 50px 20px;
 }
 
-.as {
-    -x-system-font:none;
-    color:#000000;
-    font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";
-    font-size:16px;
-    font-size-adjust:none;
-    font-stretch:normal;
-    font-style:normal;
-    font-variant:normal;
-    font-weight:normal;
-    line-height:1em;
-    margin:0 0 50px 20px;
-}
-
 .a1 {
     -x-system-font:none;
     color:#DC143C;
@@ -101,7 +88,7 @@
     font-variant:normal;
     font-weight:normal;
     line-height:1em;
-    margin:0 0 0 20px;
+    margin:0 0 0px 20px;
 }
 
 .a2 {
@@ -152,4 +139,107 @@
     text-align:left;
     margin-left: 5px;
     margin-right: 5px;
+}
+
+a#sort-dat {
+    font-size: 1.3em;
+    margin: 0 1em 0 3em;
+    border: 3px solid green;
+}
+
+.res-header {
+    display: inline;
+}
+
+.res-edit {
+    display: inline;
+    position: absolute;
+    left: 60%;
+    margin-top: 1.5em;
+    line-height: 2.2em;
+    z-order: 1;
+}
+
+.res-edit > span {
+    margin-right: 0.8em;
+    border: 1px solid;
+}
+
+.res-content {
+    margin-top: 0.5em;
+}
+
+.res-edit-del {
+    color:#000000;
+    font-size: 2.0em;
+    font-weight: bold;
+}
+
+.res-edit-rr {
+    color:#000000;
+    font-size: 1.5em;
+}
+
+.res-edit-r1 {
+    color:#DC143C;
+    font-size:1.5em;
+}
+
+.res-edit-r2 {
+    color:#6A5ACD;
+    font-size:1.5em;
+}
+
+.res-edit-r3 {
+    color:#DC143C;
+    font-size:1.7em;
+}
+
+.res-edit-r4 {
+    color:#6A5ACD;
+    font-size:1.7em;
+}
+
+.res-edit-aa {
+    -x-system-font:none;
+    color:#000000;
+    font-size:1.4em;
+}
+
+.res-edit-as {
+    -x-system-font:none;
+    color:#000000;
+    font-size:1.6em;
+}
+
+.res-edit-a1 {
+    -x-system-font:none;
+    color:#DC143C;
+    font-size:1.4em;
+}
+
+.res-edit-a2 {
+    -x-system-font:none;
+    color:#6A5ACD;
+    font-size:1.4em;
+}
+
+.res-edit-a3 {
+    -x-system-font:none;
+    color:#DC143C;
+    font-size:1.6em;
+}
+
+.res-edit-a4 {
+    -x-system-font:none;
+    color:#6A5ACD;
+    font-size:1.6em;
+}
+
+.del{
+  filter: alpha(opacity=25);
+  -moz-opacity:0.25;
+  opacity:0.25;
+  font-size:0.7em;
+  display: inline;
 }

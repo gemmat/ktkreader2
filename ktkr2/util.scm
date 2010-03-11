@@ -9,6 +9,7 @@
   (use text.tree)
   (use sxml.serializer)
   (use sxml.sxpath)
+  (use sxml.tools)
   (use www.cgi)
   (use gauche.charconv)
   (use gauche.process)
@@ -188,7 +189,7 @@
                         (push! ref-list ref0)
                         (format #f "<a class='res-ref' href='#res-~a'>&gt;&gt;~a</a>" ref0 ref0))
                       (m 0))))
-                #/(&gt\;|＞＞|＞|,|-)(\d{1,4})(?=[^<'\d])/
+                #/(&gt\;|＞＞|＞)(\d{1,4})(?=[^<'\d])/
                 (lambda (m)
                   (let ((ref0 (string->number (m 2))))
                     (if (< ref0 1050)
@@ -204,7 +205,8 @@
                                 (string-append "h" s)
                                 s)))
                     (format #f "<a href='~a'>~a</a>" t s)))))
-        (ref ,(string-join (map x->string (reverse ref-list)) ",")))))
+        (refs ,(string-join (map x->string (reverse ref-list)) ","))
+        ,(list 'color "rr"))))
   `(dat ,@(filter-map res-formatter (string-split source "\n"))))
 
 (define (html-formatter dat-sxml)
@@ -218,31 +220,83 @@
   (define sxp-date      (null-or-car-sxpath '(date *text*)))
   (define sxp-date-id   (null-or-car-sxpath '(date @ id *text*)))
   (define sxp-body      (null-or-car-sxpath '(body *text*)))
+  (define sxp-color     (null-or-car-sxpath '(color *text*)))
   `(dat
     ,(tree->string
       (html:div
        :class "main"
        (map (lambda (x)
-              (html:div
-               :class "res"
-               :id (string-append "res-" (sxp-id x))
-               (html:div
-                :class "res-header"
-                (html:span
-                 :class "res-number"
-                 (sxp-id x))
-                (html:span
-                 :class "res-name nm"
-                 (sxp-name x))
-                (html:span
-                 :class "res-date"
-                 ":" (sxp-date x)))
-               (html:div
-                :class "res-content"
-                (html:p
-                 :class "rr"
-                 (sxp-body x)))))
-            ((sxpath '(res)) dat-sxml))))))
+              (let1 id (sxp-id x)
+                (html:div
+                 :class "res"
+                 :id (string-append "res-" id)
+                 (html:div
+                  :class "res-header"
+                  (html:span
+                   :class "res-number"
+                   id)
+                  (html:span
+                   :class "res-name nm"
+                   (sxp-name x))
+                  (html:span
+                   :class "res-date"
+                   ":" (sxp-date x)))
+                 (html:div
+                  :class "res-edit"
+                  (html:span
+                   :class "res-edit-del"
+                   :onclick (string-append "edit(" id ",'del')")
+                   "ボツ")
+                  (html:span
+                   :class "res-edit-rr"
+                   :onclick (string-append "edit(" id ",'rr')")
+                   "黒")
+                  (html:span
+                   :class "res-edit-r1"
+                   :onclick (string-append "edit(" id ",'r1')")
+                   "赤")
+                  (html:span
+                   :class "res-edit-r3"
+                   :onclick (string-append "edit(" id ",'r3')")
+                   "赤")
+                  (html:span
+                   :class "res-edit-r2"
+                   :onclick (string-append "edit(" id ",'r2')")
+                   "青")
+                  (html:span
+                   :class "res-edit-r4"
+                   :onclick (string-append "edit(" id ",'r4')")
+                   "青")
+                  (html:span
+                   :class "res-edit-aa"
+                   :onclick (string-append "edit(" id ",'aa')")
+                   "AA")
+                  (html:span
+                   :class "res-edit-a1"
+                   :onclick (string-append "edit(" id ",'a1')")
+                   "AA")
+                  (html:span
+                   :class "res-edit-a3"
+                   :onclick (string-append "edit(" id ",'a3')")
+                   "AA")
+                  (html:span
+                   :class "res-edit-a2"
+                   :onclick (string-append "edit(" id ",'a2')")
+                   "AA")
+                  (html:span
+                   :class "res-edit-a4"
+                   :onclick (string-append "edit(" id ",'a4')")
+                   "AA")
+                  )
+                 (html:div
+                  :class "res-content"
+                  (html:p
+                   :id (string-append "res-content-p-" id)
+                   :class (sxp-color x)
+                   (sxp-body x)
+                   (html:br)
+                   (html:br))))))
+              ((sxpath '(res)) dat-sxml))))))
 
 ;;木の統合
 ;;http://practical-scheme.net/wiliki/wiliki.cgi?Scheme%3aリスト処理
@@ -281,63 +335,64 @@
 
 (define (sort-res dat-sxml)
   (define res-table (make-hash-table 'eq?))
-  (define (extract-relations res-list)
-    (define (extract res-list)
-      (filter-map (lambda (res)
-                    (and-let* ((str  ((if-car-sxpath '(id *text*)) res))
-                               (id   (string->number str)))
-                      (hash-table-put! res-table id res)
-                      (or (and-let* ((str ((if-car-sxpath '(ref *text*)) res))
-                                     ((not (string=? str "")))
-                                     (refs (delete id (map string->number (string-split str ",")))))
-                            (cons id (if (< 1 (length refs))
-                                       (delete 1 refs)
-                                       refs)))
-                          (list id))))
-                  res-list))
-    (define (merge refs)
-      (define ht (make-hash-table 'eq?))
-      (for-each (lambda (l)
-                  (hash-table-update! ht (apply min l) (cut append <> l) '()))
-                refs)
-      (sort-by
-       (hash-table-map ht (lambda (key value)
-                            (cons key (sort (delete-duplicates (delete key value) eq?)))))
-       car))
-    (define (remove-multipule-parents refs)
-      (define ht (make-hash-table 'eq?))
-      (map (lambda (l)
-             (cons (car l)
-                   (remove (lambda (x)
-                             (if (hash-table-exists? ht x)
-                               #t
-                               (begin
-                                 (hash-table-put! ht x #t)
-                                 #f)))
-                           (cdr l))))
-           refs))
-    (remove-multipule-parents (merge (extract res-list))))
+  (define (extract res-list)
+    (filter-map (lambda (res)
+                  (and-let* ((str  ((if-car-sxpath '(id *text*)) res))
+                             (id   (string->number str)))
+                    (hash-table-put! res-table id res) ;; side-effect for efficiency...
+                    (or (and-let* ((str ((if-car-sxpath '(refs *text*)) res))
+                                   ((not (string=? str "")))
+                                   (refs (delete id (map string->number (string-split str ",")))))
+                          (cons id (delete 1 refs)))
+                        (list id))))
+                res-list))
+  (define (merge refs)
+    (define ht (make-hash-table 'eq?))
+    (for-each (lambda (l)
+                (hash-table-update! ht (apply min l) (cut append <> l) '()))
+              refs)
+    (sort-by
+     (hash-table-map ht (lambda (key value)
+                          (cons key (sort (delete-duplicates (delete key value) eq?)))))
+     car))
+  (define (remove-multipule-parents refs)
+    (define ht (make-hash-table 'eq?))
+    (map (lambda (l)
+           (cons (car l)
+                 (remove (lambda (x)
+                           (if (hash-table-exists? ht x)
+                             #t
+                             (begin
+                               (hash-table-put! ht x #t)
+                               #f)))
+                         (cdr l))))
+         refs))
   `(dat
     ,@(map (cut hash-table-get res-table <> '())
-           (flatten (reverse (tree-merge (extract-relations ((sxpath '(res)) dat-sxml))))))))
+           (append-map (lambda (l)
+                         (if (null? (cdr l))
+                           l
+                           (let ((head (car l))
+                                 (rest (flatten (cdr l))))
+                             (hash-table-update!
+                              res-table head
+                              (lambda (res)
+                                (sxml:change-content! ((car-sxpath '(color)) res) '("r1"))
+                                res))
+                             (for-each (lambda (x)
+                                         (hash-table-update!
+                                          res-table x
+                                          (lambda (res)
+                                            (sxml:change-content! ((car-sxpath '(color)) res) '("r2"))
+                                            res)))
+                                       rest)
+                             (cons head rest))))
+                       (reverse (tree-merge (remove-multipule-parents (merge (extract ((sxpath '(res)) dat-sxml))))))))))
 
-;; (and-let* ((スレファイル "../aaaa")
-;;            (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)))
-;;   (sort-res (xml-formatter source)))
+;;(and-let* ((スレファイル "../dat/4201_4300/4231.dat")
+  ;;         (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)))
+  ;;(sort-res (xml-formatter source)))
 
-;; (merge '((56 59) (57) (58 63 64) (60) (61) (62) (64 68) (65 68 70) (66) (67) (69) (71)))
-
-;; (tree-merge '((56 59)
-;;               (57)
-;;               (58 63 64)
-;;               (60)
-;;               (61)
-;;               (62)
-;;               (64 68)
-;;               (65 70)
-;;               (66)
-;;               (67)
-;;               (69)
-;;               (71)))
+;; (reverse (tree-merge '((1) (2) (3) (4) (5) (6) (7) (8) (9) (10) (11) (12) (13) (14) (15) (16) (17) (18) (19) (20) (21) (22) (23) (24) (25) (26) (27) (28) (29) (30) (31) (32) (33) (34) (35) (36) (37) (38) (39) (40) (41) (42) (43) (44) (45) (46) (47) (48) (49) (50) (51) (52) (53) (54 55) (56 59) (57) (58 63 64) (60) (61) (62) (64 68) (65 70) (66) (67) (69) (71))))
 
 (provide "util")
