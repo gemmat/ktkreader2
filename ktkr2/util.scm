@@ -108,15 +108,18 @@
 
 ;; SXMLをXMLに変換してCGIの出力にする
 (define (cgi-output-sxml->xml sxml)
-  (write-tree `(,(cgi-header :content-type "text/xml")))
-  (srl:parameterizable
-   sxml
-   (current-output-port)
-   '(method . xml) ; XML
-   '(indent . #f) ; no indent
-   '(omit-xml-declaration . #f) ; append the XML declaretion
-   '(standalone . yes) ; add "standalone" declaretion
-   '(version . "1.0")))
+  (if (string? sxml)
+    (write-tree `(,(cgi-header :status sxml)))
+    (begin
+      (write-tree `(,(cgi-header :content-type "text/xml; charset=UTF-8")))
+      (srl:parameterizable
+       sxml
+       (current-output-port)
+       '(method . xml) ; XML
+       '(indent . #f) ; no indent
+       '(omit-xml-declaration . #f) ; append the XML declaretion
+       '(standalone . yes) ; add "standalone" declaretion
+       '(version . "1.0")))))
 
 ;; 例外メッセージをSXMLにする
 (define (cgi-on-error e)
@@ -290,9 +293,10 @@
                   )
                  (html:div
                   :class "res-content"
-                  (html:p
-                   :id (string-append "res-content-p-" id)
+                  (html:div
+                   :id (string-append "res-content-body-" id)
                    :class (sxp-color x)
+                   :onclick "textEdit(this)"
                    (sxp-body x)
                    (html:br)
                    (html:br))))))
@@ -383,7 +387,11 @@
                                          (hash-table-update!
                                           res-table x
                                           (lambda (res)
-                                            (sxml:change-content! ((car-sxpath '(color)) res) '("r2"))
+                                            (sxml:change-content! ((car-sxpath '(color)) res)
+                                                                  (or (and-let* ((refs ((if-car-sxpath '(refs *text*)) res))
+                                                                                 ((zero? (string-length refs))))
+                                                                        '("r1"))
+                                                                      '("r2")))
                                             res)))
                                        rest)
                              (cons head rest))))

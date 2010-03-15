@@ -50,14 +50,8 @@
                         (or (and-let* ((word (cgi-get-parameter "ss" params :default #f)))
                               (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob 板id word))
                             (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id))))))
-             `(ktkreader2
-               (@ (type "error"))
-               (board
-                (id ,板id)
-                (title ,板名)
-                (url ,板URL))
-               (subjects "error"))))
-         `(ktkreader2 (@ (type "error")) "fatal")))
+             "502"))
+         "503"))
    :output-proc cgi-output-sxml->xml
    :on-error cgi-on-error
    ))

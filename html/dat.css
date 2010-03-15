@@ -243,3 +243,15 @@ a#sort-dat {
   font-size:0.7em;
   display: inline;
 }
+
+.yui-editor-container {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    z-index: 999; /* So Safari behaves */
+}
+
+#msgpost {
+  visibility: hidden;
+  position: absolute;
+}

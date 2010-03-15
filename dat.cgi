@@ -64,7 +64,7 @@
                           ))
                       `(dat "cache-miss"))
                   `(dat "error"))))))
-         `(ktkreader2 (@ (type "error")) "fatal")))
+         "503"))
    :output-proc cgi-output-sxml->xml
    :on-error cgi-on-error
    ))
