@@ -47,10 +47,17 @@ function formatCache(elCell, oRecord, oColumn, oData) {
   var o = toQueryParams(document.location.search);
   o.cache = 1;
   o.dq = d.id;
+  o.sort = false;
   elCell.innerHTML = ['<a href="',
                       './dat.html?',
                       toQueryString(o),
-                      '">ｷｬｯｼｭ</a>'
+                      '">ｷｬｯｼｭ</a>',
+                      '&nbsp;&nbsp;',
+                      '<a href="',
+                      './dat.html?',
+                      toQueryString(o),
+                      '&sort=1',
+                      '">ﾅﾗﾋﾞｶｴ</a>'
                      ].join('');
 }
 

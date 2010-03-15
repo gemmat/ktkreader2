@@ -27,12 +27,51 @@
       <a id="breadcrumbs-subject" href="./subject.html?cache=1">○○板</a>
       <span >
         <a id="sort-dat" href="./subject.html?cache=1&sort=1">並びかえる</a>
+        <button id="output" onclick="output()">出力</a>
       </span>
     </div>
     <div id="header">
       <h2 id="thread-title">スレタイ</h2>
     </div>
+    <div id="output-container">
+      <button onclick="Dom.setStyle('output-container', 'display', 'none')">閉じる</button><br/>
+      <textarea id="output-textarea" cols="80" rows="40"></textarea>
+    </div>
     <div id="content"></div>
+    <img id="loading-image" src="ajax-loader.gif" alt="Loading..." title="Loading..." />
+    <style>
+      .yui-skin-sam .yui-toolbar-container .yui-toolbar-mybutton0 span.yui-toolbar-icon {
+      background: transparent url( edit_icons.png ) no-repeat scroll 0px -142px;
+      left: 5px;
+      top: 3px;
+      }
+      .yui-skin-sam .yui-toolbar-container .yui-toolbar-mybutton1 span.yui-toolbar-icon {
+      background: transparent url( edit_icons.png ) no-repeat scroll 0px -36px;
+      left: 5px;
+      top: 4px;
+      }
+      .yui-skin-sam .yui-toolbar-container .yui-toolbar-mybutton2 span.yui-toolbar-icon {
+      background: transparent url( edit_icons.png ) no-repeat scroll 0px 0px;
+      left: 5px;
+      top: 2px;
+      }
+      .yui-skin-sam .yui-toolbar-container .yui-toolbar-save span.yui-toolbar-icon {
+      background: transparent url( edit_icons.png ) no-repeat scroll 0px -72px;
+      left: 6px;
+      top: 2px;
+      }
+      .yui-skin-sam .yui-toolbar-container .yui-toolbar-revert span.yui-toolbar-icon {
+      background: transparent url( edit_icons.png ) no-repeat scroll 0px -108px;
+      left: 6px;
+      top: 3px;
+      }
+      .yui-toolbar-container span.yui-toolbar-separator-5 {
+      margin-left:30px;
+      }
+      .yui-toolbar-container span.yui-toolbar-separator-6 {
+      margin-left:160px;
+      }
+    </style>
     <textarea name="msgpost" id="msgpost" cols="50" rows="20" />
   </body>
 </html>

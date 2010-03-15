@@ -190,7 +190,7 @@
                     (if (< ref0 1050)
                       (begin
                         (push! ref-list ref0)
-                        (format #f "<a class='res-ref' href='#res-~a'>&gt;&gt;~a</a>" ref0 ref0))
+                        (format #f "<span class='res-ref'>&gt;&gt;~a</span>" ref0))
                       (m 0))))
                 #/(&gt\;|＞＞|＞)(\d{1,4})(?=[^<'\d])/
                 (lambda (m)
@@ -198,7 +198,7 @@
                     (if (< ref0 1050)
                       (begin
                         (push! ref-list ref0)
-                        (format #f "<a class='res-ref' href='#res-~a'>~a~a</a>" ref0 (m 1) ref0))
+                        (format #f "<span class='res-ref'>~a~a</span>" (m 1) ref0))
                       (m 0))))
                 regexp-html
                 (lambda (m)
@@ -236,18 +236,12 @@
                  (html:div
                   :class "res-header"
                   :onclick "textEdit(this)"
+                  id
                   (html:span
-                   :class "res-number"
-                   id)
-                  (html:span
-                   :class "res-name nm"
+                   :class "nm"
                    (sxp-name x))
-                  (html:span
-                   :class "res-mail"
-                   "[" (sxp-mail x) "]")
-                  (html:span
-                   :class "res-date"
-                   ":" (sxp-date x)))
+                  ":"
+                  (sxp-date x))
                  (html:div
                   :class "res-edit"
                   (html:span

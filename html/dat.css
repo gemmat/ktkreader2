@@ -237,11 +237,11 @@ a#sort-dat {
 }
 
 .del{
-  filter: alpha(opacity=25);
-  -moz-opacity:0.25;
-  opacity:0.25;
-  font-size:0.7em;
-  display: inline;
+    filter: alpha(opacity=25);
+    -moz-opacity:0.25;
+    opacity:0.25;
+    font-size:0.7em;
+    display: inline;
 }
 
 .yui-editor-container {
@@ -252,10 +252,7 @@ a#sort-dat {
 }
 
 #msgpost {
-  visibility: hidden;
-  position: absolute;
+    visibility: hidden;
+    position: absolute;
 }
 
-.res-mail {
-    display: none;
-}

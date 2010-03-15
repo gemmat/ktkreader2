@@ -3,10 +3,15 @@ var myResize = null;
 var Dom = YAHOO.util.Dom;
 var Event = YAHOO.util.Event;
 var editing = null;
+var revertDataStack = [];
 
 function textEdit(elt) {
   showEditor(elt);
   myEditor.setEditorHTML(elt.innerHTML);
+  if (revertDataStack.length > 5) {
+    revertDataStack.shift();
+  }
+  revertDataStack.push(elt.innerHTML.toString());
   editing = elt;
 }
 
@@ -43,6 +48,7 @@ function showResponse(req) {
   var arr_title = xmlData.getElementsByTagName("title");
   var arr_id    = xmlData.getElementsByTagName("id");
   document.title = arr_title[1].textContent + " - " + arr_title[0].textContent + "板 - ktkreader2";
+  Dom.setStyle('loading-image', 'display', 'none');
   var o = toQueryParams(document.location.search);
   o.cache = 1;
   elt = Dom.get("sort-dat");
@@ -54,7 +60,7 @@ function showResponse(req) {
   } else {
     o.sort = false;
     Dom.setAttribute(elt, "href", "./dat.html?" + toQueryString(o));
-    elt.textContent = "ふつうに並びかえる";
+    elt.textContent = "レス順に戻す";
     o.sort = 1;
   }
   o.dq = false;
@@ -66,6 +72,25 @@ function showResponse(req) {
   Dom.get("thread-title").textContent = arr_title[1].textContent;
 }
 
+function output() {
+  var nodes = Dom.get('content').firstChild.childNodes;
+  var arr = ['<div class="main">'];
+  for (var i = 0, len = nodes.length; i < len; i++) {
+    var res = nodes[i];
+    var res_header  = res.firstChild;
+    var res_content = res.lastChild;
+    var res_content_body = res_content.firstChild;
+    arr.push(res_header.innerHTML);
+    arr.push('<br/>');
+    arr.push('<div class="' + Dom.getAttribute(res_content_body, 'class') + '">');
+    arr.push(res_content_body.innerHTML);
+    arr.push('</div>');
+  }
+  arr.push('</div>');
+  Dom.get('output-textarea').value = arr.join('\n');
+  Dom.setStyle('output-container', 'display', '');
+}
+
 function main(evt) {
   var o = toQueryParams(document.location.search);
   o.format = "html";
@@ -75,22 +100,12 @@ function main(evt) {
     {success: showResponse});
   };
   o.cache = 1;
-  var elt = Dom.get("sort-dat");
-  if (!o.sort) {
-    o.sort = 1;
-    Dom.setAttribute(elt, "href", "./dat.html?" + toQueryString(o));
-    elt.textContent = "レスを並びかえる";
-    o.sort = false;
-  } else {
-    o.sort = false;
-    Dom.setAttribute(elt, "href", "./dat.html?" + toQueryString(o));
-    elt.textContent = "ふつうに並びかえる";
-    o.sort = 1;
-  }
   o.sq = false;
-  elt = Dom.get("breadcrumbs-bbsmenu");
+  var elt = Dom.get("breadcrumbs-bbsmenu");
   Dom.setAttribute(elt, "href", "./bbsmenu.html?" + toQueryString(o));
   elt.textContent = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");
+
+  Dom.setStyle('output-container', 'display', 'none');
 
   myEditor = new YAHOO.widget.Editor('msgpost',
     {
@@ -113,6 +128,8 @@ function main(evt) {
               { type: 'push', label: 'リンク', value: 'createlink', disabled: true },
               { type: 'separator' },
               { type: 'push', label: '画像', value: 'insertimage' },
+              { type: 'separator' },
+              { type: 'push', label: '元に戻す', value: 'revert'},
               { type: 'separator' },
               { type: 'push', label: '保存', value: 'save'}
             ]
@@ -144,6 +161,8 @@ function main(evt) {
   //myEditor.STR_LOCAL_FILE_WARNING
   myEditor.STR_NONE = "なし";
   myEditor.on('toolbarLoaded', function() {
+    Dom.setStyle(document.getElementsByClassName('yui-toolbar-separator-5')[0], 'width', '50px');
+    Dom.setStyle(document.getElementsByClassName('yui-toolbar-separator-6')[0], 'width', '20px');
     this.toolbar.on('mybutton0Click', function(o) {
         this.execCommand('fontsize', '14px');
     }, myEditor, true);
@@ -155,6 +174,11 @@ function main(evt) {
     }, myEditor, true);
     this.toolbar.on('saveClick', function(o) {
       closeEditor();
+    }, myEditor, true);
+    this.toolbar.on('revertClick', function(o) {
+      if (revertDataStack.length) {
+        myEditor.setEditorHTML(revertDataStack.pop());
+      }
     }, myEditor, true);
   }, myEditor, true);
   myEditor.render();
