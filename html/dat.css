@@ -255,3 +255,7 @@ a#sort-dat {
   visibility: hidden;
   position: absolute;
 }
+
+.res-mail {
+    display: none;
+}

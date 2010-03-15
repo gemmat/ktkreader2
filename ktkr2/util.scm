@@ -235,12 +235,16 @@
                  :id (string-append "res-" id)
                  (html:div
                   :class "res-header"
+                  :onclick "textEdit(this)"
                   (html:span
                    :class "res-number"
                    id)
                   (html:span
                    :class "res-name nm"
                    (sxp-name x))
+                  (html:span
+                   :class "res-mail"
+                   "[" (sxp-mail x) "]")
                   (html:span
                    :class "res-date"
                    ":" (sxp-date x)))
