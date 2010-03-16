@@ -80,9 +80,11 @@ function output() {
     var res_header  = res.firstChild;
     var res_content = res.lastChild;
     var res_content_body = res_content.firstChild;
+    var res_content_body_class = Dom.getAttribute(res_content_body, 'class');
+    if (res_content_body_class == 'del') continue;
     arr.push(res_header.innerHTML);
     arr.push('<br/>');
-    arr.push('<div class="' + Dom.getAttribute(res_content_body, 'class') + '">');
+    arr.push('<div class="' + res_content_body_class + '">');
     arr.push(res_content_body.innerHTML);
     arr.push('</div>');
   }
