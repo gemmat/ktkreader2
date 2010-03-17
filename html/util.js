@@ -1,3 +1,5 @@
+var cgiURL = "http://eva-lu-ator.net/~gemma/cgi-bin/ktkr2/";
+
 function toQueryParams(aString) {
   var match = aString.match(/([^?#]*)(#.*)?$/);
   if (!match) return {};
@@ -18,8 +20,8 @@ function toQueryParams(aString) {
 function toQueryString(aObject) {
   var results = [];
   for (var i in aObject) {
-    var key = encodeURIComponent(i), values = aObject[i];
-    if (values) results.push(key + "=" + values);
+    var key = encodeURIComponent(i), values = encodeURIComponent(aObject[i]);
+    if (aObject[i]) results.push(key + "=" + values);
   }
   return results.join('&');
 }

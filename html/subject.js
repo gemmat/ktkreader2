@@ -1,5 +1,6 @@
 var meta = null;
 var dataTable = null;
+var Dom = YAHOO.util.Dom;
 
 function formatTitle(elCell, oRecord, oColumn, oData) {
   var o = toQueryParams(document.location.search);
@@ -62,7 +63,7 @@ function formatCache(elCell, oRecord, oColumn, oData) {
 }
 
 YAHOO.util.Event.onContentReady("table-container", function() {
-  var dataSource = new YAHOO.util.XHRDataSource("http://localhost/~teruaki/cgi-bin/subject.cgi?");
+  var dataSource = new YAHOO.util.XHRDataSource(cgiURL + "subject.cgi?");
   dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_XML;
   dataSource.connXhrMode = "queueRequests";
   dataSource.useXPath = true;
@@ -86,9 +87,10 @@ YAHOO.util.Event.onContentReady("table-container", function() {
   dataSource.doBeforeCallback = function (oRequest, oFullResponse, oParsedResponse) {
     var o = toQueryParams(document.location.search);
     meta = oParsedResponse.meta;
-    document.title = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "") + " - ktkreader2";
-    YAHOO.util.Dom.get("table-container").
-      getElementsByTagName("caption")[0].textContent = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "");
+    document.title = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "") + " - 2chまとめサイトエディター2.0";
+    Dom.getElementsBy(function(x) {return true;}, "caption", "table-container", function (x) {
+      x.innerHTML = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "");
+      });
     return oParsedResponse;
   };
   // 各列の設定
@@ -121,16 +123,16 @@ YAHOO.util.Event.onContentReady("table-container", function() {
   };
   dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
 
-  forEach(["sq", "bs", "ss"], function(x) {
-    if (!o[x]) return;
-    var arr = document.getElementsByClassName(x);
-    arr[0].value = o[x];
-    arr[1].value = o[x];
+  forEach(["sq", "bs", "ss"], function(cl) {
+    if (!o[cl]) return;
+    Dom.getElementsByClassName(cl, "input", null, function(x) {
+      x.value = o[cl];
+    });
   });
   o.cache = false;
   o.sq = false;
   o.dq = false;
-  var elt = YAHOO.util.Dom.get("breadcrumbs-bbsmenu");
+  var elt = Dom.get("breadcrumbs-bbsmenu");
   elt.setAttribute("href", "./bbsmenu.html?" + toQueryString(o));
-  elt.textContent = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");
+  elt.innerHTML = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");
 });

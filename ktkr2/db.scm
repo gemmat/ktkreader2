@@ -14,7 +14,7 @@
           db-drop-table-bbsmenu
           db-drop-table-subject
           db-select-板id&板URL&板名&板最終更新日時
-          db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob
+          db-select-板id&板URL&板名&板最終更新日時-where-板名-glob
           db-select-板最終更新日時&板etag
           db-select-板id
           db-select-板URL
@@ -56,7 +56,7 @@
             (else (raise e)))
     (or (and-let* ((conn (db-ktkr2-conn)))
           (proc conn))
-        (and-let* ((conn (dbi-connect "dbi:sqlite3:/home/teruaki/ktkreader2/db/ktkr2.sqlite")))
+        (and-let* ((conn (dbi-connect "dbi:sqlite3:/home/gemma/public_html/cgi-bin/ktkr2/db/ktkr2.sqlite")))
           (unwind-protect
            (proc conn)
            (dbi-close conn))))))
@@ -121,12 +121,12 @@
               result)
          (dbi-close result))))))
 
-(define (db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob word)
-  (log-format "db-select-板id&板URL&板名&板最終更新日時-where-板URL-板名-glob ~a" word)
+(define (db-select-板id&板URL&板名&板最終更新日時-where-板名-glob word)
+  (log-format "db-select-板id&板URL&板名&板最終更新日時-where-板名-glob ~a" word)
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((glob (string-append "*" word "*"))
-            (result (dbi-do conn "SELECT id, 板URL, 板名, 板最終更新日時 FROM bbsmenu WHERE 板URL GLOB ? OR 板名 GLOB ?" '() glob glob))
+            (result (dbi-do conn "SELECT id, 板URL, 板名, 板最終更新日時 FROM bbsmenu WHERE 板名 GLOB ?" '() glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)

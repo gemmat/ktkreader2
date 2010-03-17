@@ -204,7 +204,7 @@
        (#f         "h|help" => usage)
        (else (opt . _) (print "Unknown option : " opt) (usage))
        . restargs)
-   (parameterize ((db-ktkr2-conn "dbi:sqlite3:/home/teruaki/ktkreader2/db/ktkr2.sqlite"))
+   (parameterize ((db-ktkr2-conn "dbi:sqlite3:/home/gemma/public_html/cgi-bin/ktkr2/db/ktkr2.sqlite"))
      (unwind-protect
       (cond
        (test
@@ -244,13 +244,13 @@
              1))
           (else 1)))
        (init
+        ;;(delete-directory* "dat")
+        (create-directory* "dat" #o775)
+        (create-directory* "log" #o775)
         (db-drop-table-bbsmenu)
         (db-drop-table-subject)
         (db-create-table-bbsmenu)
         (db-create-table-subject)
-        (delete-directory* "dat")
-        (create-directory* "dat" #o775)
-        (create-directory* "log" #o775)
         (log-format "initialized.")
         0)
        (else

@@ -7,18 +7,18 @@
     <link type="text/css" href="dat.css" rel="stylesheet" />
     <link rel="stylesheet" type="text/css" href="yui/build/assets/skins/sam/skin.css"/>
     <link rel="stylesheet" type="text/css" href="yui/build/resize/assets/skins/sam/resize.css"/>
-    <script src="yui/build/yahoo-dom-event/yahoo-dom-event.js"></script>
-    <script src="yui/build/element/element-min.js"></script>
-    <script src="yui/build/container/container_core-min.js"></script>
-    <script src="yui/build/menu/menu-min.js"></script>
-    <script src="yui/build/button/button-min.js"></script>
-    <script src="yui/build/editor/editor-min.js"></script>
+    <script src="yui/build/yahoo-dom-event/yahoo-dom-event.js" type="text/javascript"></script>
+    <script src="yui/build/element/element-min.js" type="text/javascript"></script>
+    <script src="yui/build/container/container_core-min.js" type="text/javascript"></script>
+    <script src="yui/build/menu/menu-min.js" type="text/javascript"></script>
+    <script src="yui/build/button/button-min.js" type="text/javascript"></script>
+    <script src="yui/build/editor/editor-min.js" type="text/javascript"></script>
     <script type="text/javascript" src="yui/build/dragdrop/dragdrop-min.js"></script>
     <script type="text/javascript" src="yui/build/resize/resize-min.js"></script>
-    <script src="yui/build/connection/connection-min.js"></script>
+    <script src="yui/build/connection/connection-min.js" type="text/javascript"></script>
     <script src="util.js" type="text/javascript"></script>
     <script src="dat.js" type="text/javascript"></script>
-    <title>スレ - ktkreader2</title>
+    <title>スレ - 2chまとめサイトエディター2.0</title>
   </head>
   <body class="yui-skin-sam">
     <div id="breadcrumbs">
@@ -27,11 +27,16 @@
       <a id="breadcrumbs-subject" href="./subject.html?cache=1">○○板</a>
       <span >
         <a id="sort-dat" href="./subject.html?cache=1&sort=1">並びかえる</a>
-        <button id="output" onclick="output()">出力</a>
+        <button id="output" onclick="output()">出力</button>
+        <button id="revert" onclick="revert()" disabled="true">いじった文章を元に戻す</button>
+        <span id="revert-sample-text"></span>
       </span>
     </div>
     <div id="header">
       <h2 id="thread-title">スレタイ</h2>
+      <a id="go-to" href=""><img class="misc-icon" src="go-to-small.gif" title="元スレ" alt="元スレ"/></a>
+      <a id="rss" href=""><img class="misc-icon" src="rss-small.gif" title="RSS" alt="RSS"/></a>
+      <a id="qrcode" href=""><img class="misc-icon" src="qrcode-small.gif" title="QRコード" alt="QRコード"/></a>
     </div>
     <div id="output-container">
       <button onclick="Dom.setStyle('output-container', 'display', 'none')">閉じる</button><br/>
@@ -60,16 +65,8 @@
       left: 6px;
       top: 2px;
       }
-      .yui-skin-sam .yui-toolbar-container .yui-toolbar-revert span.yui-toolbar-icon {
-      background: transparent url( edit_icons.png ) no-repeat scroll 0px -108px;
-      left: 6px;
-      top: 3px;
-      }
       .yui-toolbar-container span.yui-toolbar-separator-5 {
-      margin-left:30px;
-      }
-      .yui-toolbar-container span.yui-toolbar-separator-6 {
-      margin-left:160px;
+      margin-left:250px;
       }
     </style>
     <textarea name="msgpost" id="msgpost" cols="50" rows="20" />

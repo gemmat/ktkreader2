@@ -1,3 +1,5 @@
+var Dom = YAHOO.util.Dom;
+var Event = YAHOO.util.Event;
 var dataTable = null;
 
 function formatTitle(elCell, oRecord, oColumn, oData) {
@@ -31,8 +33,8 @@ function formatCache(elCell, oRecord, oColumn, oData) {
 
 }
 
-YAHOO.util.Event.onContentReady("table-container", function() {
-  var dataSource = new YAHOO.util.XHRDataSource("http://localhost/~teruaki/cgi-bin/bbsmenu.cgi?");
+Event.onContentReady("table-container", function() {
+  var dataSource = new YAHOO.util.XHRDataSource(cgiURL + "bbsmenu.cgi?");
   dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_XML;
   dataSource.connXhrMode = "queueRequests";
   dataSource.useXPath = true;
@@ -77,9 +79,13 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     paginator: paginator
   };
   if (o["bs"]) {
-    var arr = document.getElementsByClassName("bs");
-    arr[0].value = o["bs"];
-    arr[1].value = o["bs"];
+    Dom.getElementsByClassName("bs", "input", null, function(x) {
+      x.value = o["bs"];
+    });
   };
   dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
+});
+
+Event.on(window, 'load', function(e) {
+  //var myLogReader = new YAHOO.widget.LogReader("myLogger");
 });

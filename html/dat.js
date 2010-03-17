@@ -5,13 +5,30 @@ var Event = YAHOO.util.Event;
 var editing = null;
 var revertDataStack = [];
 
+function revertDataStackPush(elt) {
+  revertDataStack.push([elt, elt.innerHTML.toString()]);
+  Dom.get('revert').disabled = false;
+  Dom.get('revert-sample-text').innerHTML = "これに戻します→" + elt.innerHTML.substring(0,40) + "...";
+}
+
+function revertDataStackPop() {
+  var p = revertDataStack.pop();
+  if (!revertDataStack.length) {
+    Dom.get('revert').disabled = true;
+    Dom.get('revert-sample-text').innerHTML = '';
+  } else {
+    Dom.get('revert-sample-text').innerHTML = "これに戻します→" + revertDataStack[revertDataStack.length - 1][1].substring(0,40) + "...";
+  }
+  return p;
+}
+
 function textEdit(elt) {
   showEditor(elt);
   myEditor.setEditorHTML(elt.innerHTML);
   if (revertDataStack.length > 5) {
     revertDataStack.shift();
   }
-  revertDataStack.push(elt.innerHTML.toString());
+  revertDataStackPush(elt);
   editing = elt;
 }
 
@@ -24,7 +41,13 @@ function showEditor(elt) {
 function closeEditor() {
   if (editing) {
     myEditor.saveHTML();
-    editing.innerHTML = myEditor.get('element').value;
+    editing.innerHTML = myEditor.get('element').value + "<br/>";
+    if (revertDataStack.length) {
+      var p = revertDataStack[revertDataStack.length - 1];
+      if (p[0] == editing && p[1] == editing.innerHTML) {
+        revertDataStackPop();
+      }
+    }
     editing = null;
   }
   hideEditor();
@@ -42,38 +65,58 @@ function edit(aId, aCmd) {
 }
 
 function showResponse(req) {
+  Dom.setStyle('loading-image', 'display', 'none');
 	//put returned XML in the textarea
   var xmlData = req.responseXML;
-	Dom.get('content').innerHTML = xmlData.getElementsByTagName("dat")[0].textContent;
+  var xmlDataDat = xmlData.getElementsByTagName("dat");
+  if (!xmlDataDat.length) {
+    var xmlDataError = xmlData.getElementsByTagName("error");
+    Dom.get('content').innerHTML = xmlDataError[0].firstChild.data;
+    return;
+  }
+  var xmlDataHost = xmlData.getElementsByTagName("host");
+  var xmlDataPath = xmlData.getElementsByTagName("path");
+  var xmlDataKey  = xmlData.getElementsByTagName("key");
+  if (xmlDataHost.length && xmlDataPath.length && xmlDataKey.length) {
+    var url = ['http://',
+               xmlDataHost[0].firstChild.data,
+               '/test/read.cgi/',
+               xmlDataPath[0].firstChild.data,
+               '/',
+               xmlDataKey[0].firstChild.data,
+               '/'].join('');
+    Dom.get('go-to').setAttribute('href', url);
+    Dom.get('rss').setAttribute('href', 'http://2ch2rss.dip.jp/rss.xml?url=' + url);
+    Dom.get('qrcode').setAttribute('href',
+                                   ['http://chart.apis.google.com/chart?cht=qr&chs=150x150&choe=Shift_JIS&chl=http://c.2ch.net/test/-/',
+                                   xmlDataPath[0].firstChild.data,
+                                   '/',
+                                   xmlDataKey[0].firstChild.data,
+                                    '/i'].join(''));
+  }
+	Dom.get('content').innerHTML = xmlDataDat[0].textContent || xmlDataDat[0].firstChild.data;
   var arr_title = xmlData.getElementsByTagName("title");
   var arr_id    = xmlData.getElementsByTagName("id");
-  document.title = arr_title[1].textContent + " - " + arr_title[0].textContent + "板 - ktkreader2";
-  Dom.setStyle('loading-image', 'display', 'none');
+  document.title = arr_title[1].firstChild.data + " - " + arr_title[0].firstChild.data + "板 - 2chまとめサイトエディター2.0";
   var o = toQueryParams(document.location.search);
   o.cache = 1;
-  elt = Dom.get("sort-dat");
-  if (!o.sort) {
-    o.sort = 1;
-    Dom.setAttribute(elt, "href", "./dat.html?" + toQueryString(o));
-    elt.textContent = "レスを並びかえる";
-    o.sort = false;
-  } else {
-    o.sort = false;
-    Dom.setAttribute(elt, "href", "./dat.html?" + toQueryString(o));
-    elt.textContent = "レス順に戻す";
-    o.sort = 1;
-  }
   o.dq = false;
-  o.sq = arr_id[0].textContent;
-  var elt = null;
-  elt = Dom.get("breadcrumbs-subject");
+  o.sq = arr_id[0].firstChild.data;
+  var elt = Dom.get("breadcrumbs-subject");
   Dom.setAttribute(elt, "href", "./subject.html?" + toQueryString(o));
-  elt.textContent = arr_title[0].textContent + "板" + (o.ss ? "(" + o.ss + ")" : "");
-  Dom.get("thread-title").textContent = arr_title[1].textContent;
+  elt.innerHTML = arr_title[0].firstChild.data + "板" + (o.ss ? "(" + o.ss + ")" : "");
+  Dom.get("thread-title").innerHTML = arr_title[1].firstChild.data;
+}
+
+function revert() {
+  if (revertDataStack.length) {
+    var p = revertDataStackPop();
+    p[0].innerHTML = p[1];
+  }
 }
 
 function output() {
-  var nodes = Dom.get('content').firstChild.childNodes;
+  var nodes = Dom.getChildren(Dom.getFirstChild('content'));
   var arr = ['<div class="main">'];
   for (var i = 0, len = nodes.length; i < len; i++) {
     var res = nodes[i];
@@ -98,14 +141,28 @@ function main(evt) {
   o.format = "html";
   if (o.dq) {
 	  var myAjax = YAHOO.util.Connect.asyncRequest('GET',
-    "http://localhost/~teruaki/cgi-bin/dat.cgi?" + toQueryString(o),
+    cgiURL + "dat.cgi?" + toQueryString(o),
     {success: showResponse});
   };
+  o.format = false;
   o.cache = 1;
+  var elt = Dom.get("sort-dat");
+  if (!o.sort) {
+    o.sort = 1;
+    Dom.setAttribute(elt, "href", "./dat.html?" + toQueryString(o));
+    elt.innerHTML = "レスを並びかえる";
+    o.sort = false;
+  } else {
+    o.sort = false;
+    Dom.setAttribute(elt, "href", "./dat.html?" + toQueryString(o));
+    elt.innerHTML = "レス順に戻す";
+    o.sort = 1;
+  }
   o.sq = false;
-  var elt = Dom.get("breadcrumbs-bbsmenu");
+  o.dq = false;
+  elt = Dom.get("breadcrumbs-bbsmenu");
   Dom.setAttribute(elt, "href", "./bbsmenu.html?" + toQueryString(o));
-  elt.textContent = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");
+  elt.innerHTML = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");
 
   Dom.setStyle('output-container', 'display', 'none');
 
@@ -130,8 +187,6 @@ function main(evt) {
               { type: 'push', label: 'リンク', value: 'createlink', disabled: true },
               { type: 'separator' },
               { type: 'push', label: '画像', value: 'insertimage' },
-              { type: 'separator' },
-              { type: 'push', label: '元に戻す', value: 'revert'},
               { type: 'separator' },
               { type: 'push', label: '保存', value: 'save'}
             ]
@@ -163,8 +218,6 @@ function main(evt) {
   //myEditor.STR_LOCAL_FILE_WARNING
   myEditor.STR_NONE = "なし";
   myEditor.on('toolbarLoaded', function() {
-    Dom.setStyle(document.getElementsByClassName('yui-toolbar-separator-5')[0], 'width', '50px');
-    Dom.setStyle(document.getElementsByClassName('yui-toolbar-separator-6')[0], 'width', '20px');
     this.toolbar.on('mybutton0Click', function(o) {
         this.execCommand('fontsize', '14px');
     }, myEditor, true);
@@ -176,11 +229,6 @@ function main(evt) {
     }, myEditor, true);
     this.toolbar.on('saveClick', function(o) {
       closeEditor();
-    }, myEditor, true);
-    this.toolbar.on('revertClick', function(o) {
-      if (revertDataStack.length) {
-        myEditor.setEditorHTML(revertDataStack.pop());
-      }
     }, myEditor, true);
   }, myEditor, true);
   myEditor.render();

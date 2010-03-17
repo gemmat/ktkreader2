@@ -36,12 +36,18 @@
              (board
               (id ,板id)
               (title ,板名)
+              ,@(receive (host path) (decompose-板URL 板URL)
+                  (if (and host path)
+                    `((host ,host)
+                      (path ,path))
+                    '()))
               (url ,板URL)
               (subject
                (id ,スレid)
                (title ,スレタイ)
                (rescount ,レス数)
                (url ,スレURL)
+               (key ,(extract-スレキー スレURL))
                ,(if (update-dat スレURL)
                   (or (and-let* ((スレファイル (db-select-スレファイル-is-not-null スレid))
                                  (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))
@@ -64,7 +70,7 @@
                           ))
                       `(dat "cache-miss"))
                   `(dat "error"))))))
-         "503"))
+         "501"))
    :output-proc cgi-output-sxml->xml
    :on-error cgi-on-error
    ))

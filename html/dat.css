@@ -251,8 +251,21 @@ a#sort-dat {
     z-index: 999; /* So Safari behaves */
 }
 
+#header {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+#thread-title {
+    display: inline;
+    margin-right: 2em;
+}
+
 #msgpost {
     visibility: hidden;
     position: absolute;
 }
 
+#revert {
+    margin-left: 20px;
+}

@@ -142,6 +142,8 @@
 
 (define (xml-formatter source)
   (define c 0)
+  (define (check-range n)
+    (and (>= n 1) (< n 1020)))
   (define (res-formatter line)
     (define ref-list '()) ;;quasi-quoteの評価順序は決まってるんだっけ?
     (inc! c)
@@ -168,7 +170,7 @@
                 (lambda (m)
                   (let ((ref0 (string->number (m 1)))
                         (ref1 (string->number (m 2))))
-                    (if (and (< ref0 1050) (< ref1 1050))
+                    (if (and (check-range ref0) (check-range ref1))
                       (begin
                         (push! ref-list ref0)
                         (push! ref-list ref1)
@@ -178,7 +180,7 @@
                 (lambda (m)
                   (let ((ref0 (string->number (m 2)))
                         (ref1 (string->number (m 4))))
-                    (if (and (< ref0 1050) (< ref1 1050))
+                    (if (and (check-range ref0) (check-range ref1))
                       (begin
                         (push! ref-list ref0)
                         (push! ref-list ref1)
@@ -187,7 +189,7 @@
                 #/<a>&gt\;&gt\;(\d{1,4})<\/a>/
                 (lambda (m)
                   (let ((ref0 (string->number (m 1))))
-                    (if (< ref0 1050)
+                    (if (check-range ref0)
                       (begin
                         (push! ref-list ref0)
                         (format #f "<span class='res-ref'>&gt;&gt;~a</span>" ref0))
@@ -195,7 +197,7 @@
                 #/(&gt\;|＞＞|＞)(\d{1,4})(?=[^<'\d])/
                 (lambda (m)
                   (let ((ref0 (string->number (m 2))))
-                    (if (< ref0 1050)
+                    (if (check-range ref0)
                       (begin
                         (push! ref-list ref0)
                         (format #f "<span class='res-ref'>~a~a</span>" (m 1) ref0))
@@ -376,21 +378,23 @@
                            l
                            (let ((head (car l))
                                  (rest (flatten (cdr l))))
-                             (hash-table-update!
-                              res-table head
-                              (lambda (res)
-                                (sxml:change-content! ((car-sxpath '(color)) res) '("r1"))
-                                res))
+                             (when (hash-table-exists? res-table head)
+                               (hash-table-update!
+                                res-table head
+                                (lambda (res)
+                                  (sxml:change-content! ((car-sxpath '(color)) res) '("r1"))
+                                  res)))
                              (for-each (lambda (x)
-                                         (hash-table-update!
-                                          res-table x
-                                          (lambda (res)
-                                            (sxml:change-content! ((car-sxpath '(color)) res)
-                                                                  (or (and-let* ((refs ((if-car-sxpath '(refs *text*)) res))
-                                                                                 ((zero? (string-length refs))))
-                                                                        '("r1"))
-                                                                      '("r2")))
-                                            res)))
+                                         (when (hash-table-exists? res-table x)
+                                           (hash-table-update!
+                                            res-table x
+                                            (lambda (res)
+                                              (sxml:change-content! ((car-sxpath '(color)) res)
+                                                                    (or (and-let* ((refs ((if-car-sxpath '(refs *text*)) res))
+                                                                                   ((zero? (string-length refs))))
+                                                                          '("r1"))
+                                                                        '("r2")))
+                                              res))))
                                        rest)
                              (cons head rest))))
                        (reverse (tree-merge (remove-multipule-parents (merge (extract ((sxpath '(res)) dat-sxml))))))))))

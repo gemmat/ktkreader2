@@ -47,7 +47,7 @@
                             (rescount ,レス数)
                             (key ,(extract-スレキー スレURL))
                             (cache ,(or (and スレファイル 1) 0)))))
-                        (or (and-let* ((word (cgi-get-parameter "ss" params :default #f)))
+                        (or (and-let* ((word (cgi-get-parameter "ss" params :default #f :convert (cut uri-decode-string <> :cgi-decode #t))))
                               (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob 板id word))
                             (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id))))))
              "502"))
