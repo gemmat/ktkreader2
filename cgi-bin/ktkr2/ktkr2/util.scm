@@ -15,6 +15,7 @@
   (use gauche.process)
   (use gauche.logger)
   (use gauche.parameter)
+  (use config)
   (export acar
           acadr
           sjis-port->utf8-string
@@ -80,7 +81,7 @@
     (string-join (map number->string (list (+ x 1) (+ x m))) "_")))
 
 (define (ktkr2-log-open)
-  (log-open (build-path (current-directory) "log" (path-swap-extension (date->string (current-date) "~b_~d_~y") "log"))
+  (log-open (build-path path-log (path-swap-extension (date->string (current-date) "~b_~d_~y") "log"))
             :prefix "~T:"))
 
 (define cache? (make-parameter #f))

@@ -6,6 +6,8 @@
   (use gauche.logger)
   (use util.relation)
   (use ktkr2.util)
+  (use file.util)
+  (use config)
   (export db-ktkr2-conn
           call-with-ktkr2-db
           call-with-ktkr2-db-transaction
@@ -56,7 +58,7 @@
             (else (raise e)))
     (or (and-let* ((conn (db-ktkr2-conn)))
           (proc conn))
-        (and-let* ((conn (dbi-connect "dbi:sqlite3:/home/gemma/public_html/cgi-bin/ktkr2/db/ktkr2.sqlite")))
+        (and-let* ((conn (dbi-connect (string-append "dbi:sqlite3:" path-db))))
           (unwind-protect
            (proc conn)
            (dbi-close conn))))))

@@ -12,6 +12,7 @@
 (use dbi)
 
 (add-load-path "./")
+(use config)
 (use ktkr2.bbsmenu)
 (use ktkr2.util)
 (use ktkr2.db)
@@ -69,7 +70,7 @@
              (and-let* ((板id (db-select-板id 板URL)))
                (db-insert-スレ 板id スレURL)
                (and-let* ((スレid (db-select-スレid スレURL))
-                          (dir (build-path (current-directory) "dat" (distribute-path スレid 100)))
+                          (dir (build-path path-dat (distribute-path スレid 100)))
                           ((create-directory* dir #o775))
                           (スレファイル (build-path dir (path-swap-extension (x->string スレid) "dat"))))
                  (call-with-output-file スレファイル
@@ -201,10 +202,11 @@
        (dat        "d|dat=s")
        (init       "i|init")
        (test       "t|test=s")
+       (cron       "c|cron")
        (#f         "h|help" => usage)
        (else (opt . _) (print "Unknown option : " opt) (usage))
        . restargs)
-   (parameterize ((db-ktkr2-conn "dbi:sqlite3:/home/gemma/public_html/cgi-bin/ktkr2/db/ktkr2.sqlite"))
+   (parameterize ((db-ktkr2-conn (string-append "dbi:sqlite3:" path-db)))
      (unwind-protect
       (cond
        (test
@@ -245,13 +247,20 @@
           (else 1)))
        (init
         ;;(delete-directory* "dat")
-        (create-directory* "dat" #o775)
-        (create-directory* "log" #o775)
+        (create-directory* "dat" #o755)
+        (create-directory* "log" #o755)
         (db-drop-table-bbsmenu)
         (db-drop-table-subject)
         (db-create-table-bbsmenu)
         (db-create-table-subject)
         (log-format "initialized.")
+        0)
+       (cron
+        (let1 cron-板id (call-with-input-file "./cron" read)
+          (log-format "cron ~a" cron-板id)
+          (and-let* ((板URL (db-select-板URL (modulo cron-板id 830))))
+            (get-2ch-subject 板URL))
+          (call-with-output-file "./cron" (cut write (+ cron-板id 1) <>)))
         0)
        (else
         (usage)
@@ -264,6 +273,7 @@
   (format #t " -s, --subject=URL get 2ch board.\n")
   (format #t " -d, --dat=URL     get 2ch thread.\n")
   (format #t " -i, --init        initialize.\n")
+  (format #t " -c, --cron        get 2ch board cron.\n")
   (format #t " -h, --help        print this documentation.\n")
   #t)
 

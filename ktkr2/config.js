@@ -1,0 +1,1 @@
+var cgiURL = "http://localhost/~teruaki/cgi-bin/ktkr2/";

@@ -1,5 +1,3 @@
-var cgiURL = "http://eva-lu-ator.net/~gemma/cgi-bin/ktkr2/";
-
 function toQueryParams(aString) {
   var match = aString.match(/([^?#]*)(#.*)?$/);
   if (!match) return {};

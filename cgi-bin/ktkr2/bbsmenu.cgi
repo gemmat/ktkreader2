@@ -1,6 +1,7 @@
 #!/usr/local/bin/gosh
 (use rfc.uri)
 (use util.match)
+(use file.util)
 (use text.html-lite)
 (use gauche.charconv)
 (use gauche.logger)
@@ -9,7 +10,6 @@
 (add-load-path "./")
 (use ktkr2.db)
 (use ktkr2.util)
-
 (ktkr2-log-open)
 
 (define (main args)
