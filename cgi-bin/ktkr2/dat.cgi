@@ -11,6 +11,7 @@
 (add-load-path "./")
 (use ktkr2.util)
 (use ktkr2.db)
+(ktkr2-log-open)
 
 (define (update-dat スレURL)
   (or (cache?)

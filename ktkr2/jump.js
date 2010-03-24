@@ -2,39 +2,27 @@ var meta = null;
 var dataTable = null;
 
 YAHOO.util.Event.onContentReady("table-container", function() {
-  var dataSource = new YAHOO.util.XHRDataSource(cgiURL + "subject.cgi?");
+  var dataSource = new YAHOO.util.XHRDataSource(cgiURL + "jump.cgi?");
   dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_XML;
   dataSource.connXhrMode = "queueRequests";
   dataSource.useXPath = true;
   dataSource.responseSchema = {
-    metaFields: {
-      boardId: "/ktkreader2/board/id",
-      boardTitle: "/ktkreader2/board/title",
-      boardHost: "/ktkreader2/board/host",
-      boardPath: "/ktkreader2/board/path",
-      boardURL: "/ktkreader2/board/url"
-    },
-    resultNode: "subject",
+    resultNode: "result",
     fields: [
-      {key: "subjectId", locator: "id", parser: "number"},
-      {key: "subjectTitle", locator: "title"},
-      {key: "subjectRescount", locator: "rescount", parser: "number"},
-      {key: "subjectCache", locator: "cache", parser: "number"},
-      {key: "subjectKey", locator: "key", parser: "number"}
+      {key: "boardId",         locator: "board/id",               parser: "number"},
+      {key: "boardTitle",      locator: "board/title"},
+      {key: "boardHost",       locator: "board/host"},
+      {key: "boardPath",       locator: "board/path"},
+      {key: "subjectId",       locator: "board/subject/id",       parser: "number"},
+      {key: "subjectTitle",    locator: "board/subject/title"},
+      {key: "subjectRescount", locator: "board/subject/rescount", parser: "number"},
+      {key: "subjectCache",    locator: "board/subject/cache",    parser: "number"},
+      {key: "subjectKey",      locator: "board/subject/key",      parser: "number"}
     ]
-  };
-  dataSource.doBeforeCallback = function (oRequest, oFullResponse, oParsedResponse) {
-    var o = toQueryParams(document.location.search);
-    meta = oParsedResponse.meta;
-    document.title = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "") + " - 2chまとめサイトエディター2.0";
-    Dom.getElementsBy(function(x) {return true;}, "caption", "table-container", function (x) {
-      x.innerHTML = meta.boardTitle + "板" + (o.ss ? "(" + o.ss + ")" : "");
-      });
-    return oParsedResponse;
   };
   // 各列の設定
   var columns = [
-    //{key: "id", label: "ID", sortable: true},
+    {key: "boardTitle", label: "板", formatter: formatBoardTitle, sortable: true, resizable: true},
     {key: "subjectTitle", label: "スレ", formatter: formatSubjectTitle, sortable: true, resizable: true},
     {key: "subjectRescount", label: "レス数", formatter: "number", sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC }},
     {key: "subjectSpeed", label: "勢い", formatter: formatSubjectSpeed, sortable: true, sortOptions: { field: "subjectSpeed", sortFunction: sortBySubjectSpeed, defaultDir: YAHOO.widget.DataTable.CLASS_DESC }},
@@ -56,23 +44,12 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     }
   });
   var o = toQueryParams(document.location.search);
+  if (!o.q) return;
   var configs = {
-    caption: "○○板",
+    caption: "検索",
     initialRequest: toQueryString(o),
     paginator : paginator
   };
   dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
-
-  forEach(["sq", "bs", "ss"], function(cl) {
-    if (!o[cl]) return;
-    Dom.getElementsByClassName(cl, "input", null, function(x) {
-      x.value = o[cl];
-    });
-  });
-  o.cache = false;
-  o.sq = false;
-  o.dq = false;
-  var elt = Dom.get("breadcrumbs-bbsmenu");
-  elt.setAttribute("href", "./bbsmenu.html?" + toQueryString(o));
-  elt.innerHTML = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");
+  Dom.get("q").value = o.q;
 });

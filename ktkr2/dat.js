@@ -173,6 +173,7 @@ function main(evt) {
   }
   o.sq = false;
   o.dq = false;
+  o.cache = false;
   elt = Dom.get("breadcrumbs-bbsmenu");
   Dom.setAttribute(elt, "href", "./bbsmenu.html?" + toQueryString(o));
   elt.innerHTML = "メニュー" + (o.bs ? "(" + o.bs + ")" : "");

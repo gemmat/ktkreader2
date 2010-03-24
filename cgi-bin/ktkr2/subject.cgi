@@ -11,6 +11,7 @@
 (add-load-path "./")
 (use ktkr2.util)
 (use ktkr2.db)
+(ktkr2-log-open)
 
 (define (update-subject 板URL)
   (or (cache?)
@@ -48,7 +49,7 @@
                             (key ,(extract-スレキー スレURL))
                             (cache ,(or (and スレファイル 1) 0)))))
                         (or (and-let* ((word (cgi-get-parameter "ss" params :default #f :convert (cut uri-decode-string <> :cgi-decode #t))))
-                              (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob 板id word))
+                              (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-板id-スレタイ-glob 板id word))
                             (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id))))))
              "502"))
          "503"))

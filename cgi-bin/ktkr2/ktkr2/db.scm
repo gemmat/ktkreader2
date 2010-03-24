@@ -37,7 +37,9 @@
           db-select-スレid&スレファイル-is-not-null
           db-select-スレファイル-is-not-null
           db-select-スレid&スレURL&スレタイ&レス数&スレファイル
-          db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob
+          db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-板id-スレタイ-glob
+          db-select-スレid&板id&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob
+          db-select-スレid&板id&スレURL&スレタイ&レス数&スレファイル-where-スレURL-glob
           db-select-スレ最終更新日時&スレetag
           db-select-板のスレファイル
           db-delete-板のスレ
@@ -355,8 +357,8 @@
               result)
          (dbi-close result))))))
 
-(define (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob 板id word)
-  (log-format "db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob ~a ~a" 板id word)
+(define (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-板id-スレタイ-glob 板id word)
+  (log-format "db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-板id-スレタイ-glob ~a ~a" 板id word)
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((glob (string-append "*" word "*"))
@@ -365,6 +367,42 @@
        (begin0
          (map (lambda (row)
                 (list (getter row "id")
+                      (getter row "スレURL")
+                      (getter row "スレタイ")
+                      (getter row "レス数")
+                      (getter row "スレファイル")))
+              result)
+         (dbi-close result))))))
+
+(define (db-select-スレid&板id&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob word)
+  (log-format "db-select-スレid&板id&スレURL&スレタイ&レス数&スレファイル-where-スレタイ-glob ~a" word)
+  (call-with-ktkr2-db
+   (lambda (conn)
+     (let* ((glob (string-append "*" word "*"))
+            (result (dbi-do conn "SELECT id, 板id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE スレタイ GLOB ?" '() glob))
+            (getter (relation-accessor result)))
+       (begin0
+         (map (lambda (row)
+                (list (getter row "id")
+                      (getter row "板id")
+                      (getter row "スレURL")
+                      (getter row "スレタイ")
+                      (getter row "レス数")
+                      (getter row "スレファイル")))
+              result)
+         (dbi-close result))))))
+
+(define (db-select-スレid&板id&スレURL&スレタイ&レス数&スレファイル-where-スレURL-glob word)
+  (log-format "db-select-スレid&板id&スレURL&スレタイ&レス数&スレファイル-where-スレURL-glob ~a" word)
+  (call-with-ktkr2-db
+   (lambda (conn)
+     (let* ((glob (string-append "*" word "*"))
+            (result (dbi-do conn "SELECT id, 板id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE スレURL GLOB ?" '() glob))
+            (getter (relation-accessor result)))
+       (begin0
+         (map (lambda (row)
+                (list (getter row "id")
+                      (getter row "板id")
                       (getter row "スレURL")
                       (getter row "スレタイ")
                       (getter row "レス数")

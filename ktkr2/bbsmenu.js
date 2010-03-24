@@ -1,37 +1,4 @@
-var Dom = YAHOO.util.Dom;
-var Event = YAHOO.util.Event;
 var dataTable = null;
-
-function formatTitle(elCell, oRecord, oColumn, oData) {
-  var o = toQueryParams(document.location.search);
-  o.cache = false;
-  o.sq = oRecord.getData().id;
-  o.dq = false;
-  o.ss = false;
-  elCell.innerHTML = ['<a href="',
-                      './subject.html?',
-                      toQueryString(o),
-                      '">',
-                      oData,
-                      '</a>'].join('');
-
-}
-
-function formatCache(elCell, oRecord, oColumn, oData) {
-  if (oData == "0") return;
-  var o = toQueryParams(document.location.search);
-  o.cache = 1;
-  o.sq = oRecord.getData().id;
-  o.dq = false;
-  o.ss = false;
-  elCell.innerHTML = ['<a href="',
-                      './subject.html?',
-                      toQueryString(o),
-                      '">',
-                      'ｷｬｯｼｭ',
-                      '</a>'].join('');
-
-}
 
 Event.onContentReady("table-container", function() {
   var dataSource = new YAHOO.util.XHRDataSource(cgiURL + "bbsmenu.cgi?");
@@ -41,19 +8,18 @@ Event.onContentReady("table-container", function() {
   dataSource.responseSchema = {
     resultNode: "board",
     fields: [
-      {key: "id", parser: "number"},
-      "title",
-      "host",
-      "path",
-      "url",
-      "cache"
+      {key: "boardId", locator: "id", parser: "number"},
+      {key: "boardTitle", locator: "title"},
+      {key: "boardHost", locator: "host"},
+      {key: "boardPath", locator: "path"},
+      {key: "boardCache", locator: "cache", parser: "number"}
     ]
   };
   // 各列の設定
   var columns = [
     //{key: "id", label: "ID", sortable: true},
-    {key: "title", label: "板名", formatter: formatTitle, sortable: true, resizable: true},
-    {key: "cache", label: "ｷｬｯｼｭ", formatter: formatCache, sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC }}
+    {key: "boardTitle", label: "板名", formatter: formatBoardTitle, sortable: true, resizable: true},
+    {key: "boardCache", label: "ｷｬｯｼｭ", formatter: formatBoardCache, sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC }}
   ];
   var paginator = new YAHOO.widget.Paginator({
     rowsPerPage: 20,
@@ -86,6 +52,6 @@ Event.onContentReady("table-container", function() {
   dataTable = new YAHOO.widget.DataTable("table-container", columns, dataSource, configs);
 });
 
-Event.on(window, 'load', function(e) {
+//Event.on(window, 'load', function(e) {
   //var myLogReader = new YAHOO.widget.LogReader("myLogger");
-});
+//});

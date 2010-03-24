@@ -246,9 +246,8 @@
              1))
           (else 1)))
        (init
-        ;;(delete-directory* "dat")
-        (create-directory* "dat" #o755)
-        (create-directory* "log" #o755)
+        (create-directory* path-dat #o755)
+        (create-directory* path-log #o755)
         (db-drop-table-bbsmenu)
         (db-drop-table-subject)
         (db-create-table-bbsmenu)
@@ -256,11 +255,12 @@
         (log-format "initialized.")
         0)
        (cron
-        (let1 cron-板id (call-with-input-file "./cron" read)
+        ;; */1 * * * * /usr/local/bin/gosh -I/home/teruaki/public_html/cgi-bin/ktkr2/ /home/teruaki/public_html/cgi-bin/ktkr2/main.scm --cron >/dev/null 2>$1
+        (let1 cron-板id (call-with-input-file path-cron read)
           (log-format "cron ~a" cron-板id)
           (and-let* ((板URL (db-select-板URL (modulo cron-板id 830))))
             (get-2ch-subject 板URL))
-          (call-with-output-file "./cron" (cut write (+ cron-板id 1) <>)))
+          (call-with-output-file path-cron (cut write (+ cron-板id 1) <>)))
         0)
        (else
         (usage)
