@@ -37,7 +37,7 @@ function forEach(aArray, aProc) {
 function formatBoardTitle(elCell, oRecord, oColumn, oData) {
   var o = toQueryParams(document.location.search);
   o.sq = oRecord.getData("boardId");
-  o.cache = 1;
+  o.cache = false;
   o.q = false;
   elCell.innerHTML = ['<a href="',
                       './subject.html?',
