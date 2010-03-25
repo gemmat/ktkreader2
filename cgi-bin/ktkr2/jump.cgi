@@ -40,7 +40,8 @@
                             ((スレid 板id スレURL スレタイ レス数 スレファイル)
                              (and-let* ((p (get-info 板id))
                                         (板URL (car p))
-                                        (板名  (cdr p)))
+                                        (板名  (cdr p))
+                                        (スレキー (extract-スレキー スレURL)))
                                `(result
                                  (board
                                   (id ,板id)
@@ -55,7 +56,8 @@
                                    (id ,スレid)
                                    (title ,スレタイ)
                                    (rescount ,レス数)
-                                   (key ,(extract-スレキー スレURL))
+                                   (key ,スレキー)
+                                   (speed ,(スレの勢い レス数 スレキー))
                                    (cache ,(or (and スレファイル 1) 0))))))))
                     (rxmatch-if (#/^http:\/\// word)
                         (#f)

@@ -42,12 +42,14 @@
                 (subjects
                  ,@(map (match-lambda
                          ((スレid スレURL スレタイ レス数 スレファイル)
-                          `(subject
-                            (id ,スレid)
-                            (title ,スレタイ)
-                            (rescount ,レス数)
-                            (key ,(extract-スレキー スレURL))
-                            (cache ,(or (and スレファイル 1) 0)))))
+                          (let1 スレキー (extract-スレキー スレURL)
+                            `(subject
+                              (id ,スレid)
+                              (title ,スレタイ)
+                              (rescount ,レス数)
+                              (key ,スレキー)
+                              (speed ,(スレの勢い レス数 スレキー))
+                              (cache ,(or (and スレファイル 1) 0))))))
                         (or (and-let* ((word (cgi-get-parameter "ss" params :default #f :convert (cut uri-decode-string <> :cgi-decode #t))))
                               (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-板id-スレタイ-glob 板id word))
                             (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id))))))

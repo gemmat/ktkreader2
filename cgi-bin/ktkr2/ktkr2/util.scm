@@ -31,6 +31,7 @@
           href-dat
           decompose-板URL
           extract-スレキー
+          スレの勢い
           cgi-output-sxml->xml
           cgi-on-error
           xml-formatter
@@ -106,6 +107,16 @@
     (and path
          (receive (_ f _) (decompose-path スレURL)
            f))))
+
+(define now (sys-time))
+(define (スレの勢い rescount key)
+  (cond
+   ((< rescount 5)
+    10)
+   ((< rescount 10)
+    100)
+   (else
+    (floor (* (/ rescount (- now (string->number key))) 86400)))))
 
 ;; SXMLをXMLに変換してCGIの出力にする
 (define (cgi-output-sxml->xml sxml)

@@ -1,6 +1,5 @@
 var Dom = YAHOO.util.Dom;
 var Event = YAHOO.util.Event;
-var currentSeconds = Date.now() / 1000;
 
 function toQueryParams(aString) {
   var match = aString.match(/([^?#]*)(#.*)?$/);
@@ -129,22 +128,3 @@ function formatSubjectCache(elCell, oRecord, oColumn, oData) {
                      ].join('');
 }
 
-function formatSubjectSpeed(elCell, oRecord, oColumn, oData) {
-  var rescount = oRecord.getData("subjectRescount");
-  var key      = oRecord.getData("subjectKey");
-  var speed;
-  if (rescount < 5) {
-    speed = 10;
-  } else if (rescount < 10) {
-    speed = 100;
-  } else {
-    speed = Math.floor(rescount / ((currentSeconds - key) / 86400));
-  }
-  elCell.innerHTML = speed;
-  oRecord.setData("subjectSpeed", speed);
-}
-
-function sortBySubjectSpeed(a, b, desc, field) {
-  var r = b.getData(field) - a.getData(field);
-  return desc ? r : -1 * r;
-}

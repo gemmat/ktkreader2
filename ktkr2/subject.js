@@ -19,6 +19,7 @@ YAHOO.util.Event.onContentReady("table-container", function() {
       {key: "subjectId", locator: "id", parser: "number"},
       {key: "subjectTitle", locator: "title"},
       {key: "subjectRescount", locator: "rescount", parser: "number"},
+      {key: "subjectSpeed", locator: "speed", parser: "number"},
       {key: "subjectCache", locator: "cache", parser: "number"},
       {key: "subjectKey", locator: "key", parser: "number"}
     ]
@@ -37,7 +38,7 @@ YAHOO.util.Event.onContentReady("table-container", function() {
     //{key: "id", label: "ID", sortable: true},
     {key: "subjectTitle", label: "スレ", formatter: formatSubjectTitle, sortable: true, resizable: true},
     {key: "subjectRescount", label: "レス数", formatter: "number", sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC }},
-    {key: "subjectSpeed", label: "勢い", formatter: formatSubjectSpeed, sortable: true, sortOptions: { field: "subjectSpeed", sortFunction: sortBySubjectSpeed, defaultDir: YAHOO.widget.DataTable.CLASS_DESC }},
+    {key: "subjectSpeed", label: "勢い", formatter: "number", sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC }},
     {key: "subjectCache", label: "ｷｬｯｼｭ", formatter: formatSubjectCache, sortable: true, sortOptions: { defaultDir: YAHOO.widget.DataTable.CLASS_DESC}},
     {key: "subjectKey", label: "その他", formatter: formatSubjectMisc, className: "column-misc"}
   ];
