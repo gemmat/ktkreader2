@@ -78,9 +78,13 @@
                      (if (string=? (acadr (assoc "content-encoding" header)) "gzip")
                        (call-with-input-string-gzip gzip-body (cut copy-port <> out))
                        (call-with-input-string      gzip-body (cut copy-port <> out)))))
-                 (db-update-スレファイル スレid スレファイル)
-                 (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
-                 '成功)))
+                 (rxmatch-if (#/^<html>/ (call-with-input-file スレファイル read-line :encoding 'SHIFT_JIS))
+                     (#f)
+                     '人大杉
+                     (begin
+                       (db-update-スレファイル スレid スレファイル)
+                       (db-update-スレ最終更新日時&スレetag スレid (acadr (assoc "last-modified" header)) (acadr (assoc "etag" header)))
+                       '成功)))))
             (else '失敗))))))
 
 (define (get-2ch-dat-diff スレid スレURL スレファイル)
@@ -116,19 +120,19 @@
               (lambda _ #t) :input スレ差分ファイル)
             '成功)
           (begin
+            ;;あぼーん
             (db-update-null-スレ最終更新日時&スレetag スレid)
-            (get-2ch-dat-full スレURL)
-            'あぼーん)))
+            (get-2ch-dat-full スレURL))))
        ((string=? status "302")
-        '移転)
+        'スレ移転)
        ((string=? status "304")
         '更新無し)
        ((string=? status "404")
         'スレ消失)
        ((string=? status "416")
+        ;;あぼーん
         (db-update-null-スレ最終更新日時&スレetag スレid)
-        (get-2ch-dat-full スレURL)
-        'あぼーん)
+        (get-2ch-dat-full スレURL))
        (else
         '失敗)))))
 
@@ -206,7 +210,6 @@
        (subject    "s|subject=s")
        (dat        "d|dat=s")
        (init       "i|init")
-       (test       "t|test=s")
        (cron       "c|cron")
        (#f         "h|help" => usage)
        (else (opt . _) (print "Unknown option : " opt) (usage))
@@ -214,46 +217,18 @@
    (parameterize ((db-ktkr2-conn (string-append "dbi:sqlite3:" path-db)))
      (unwind-protect
       (cond
-       (test
-        (print test)
-        0)
        (bbsmenu
-        (case (get-2ch-bbsmenu)
-          ((成功) =>
-           (lambda (x)
-             (log-format "get-2ch-bbsmenu ~a" x)
-             0))
-          ((板消失 失敗) =>
-           (lambda (x)
-             (log-format "get-2ch-bbsmenu error: ~a" x)
-             1))
-          (else 1)))
+        (let1 r (get-2ch-bbsmenu)
+          (log-format "get-2ch-bbsmenu ~a" r)
+          (exit-code r)))
        (subject
-        (case (get-2ch-subject subject)
-          ((成功 更新無し) =>
-           (lambda (x)
-             (log-format "get-2ch-subject ~a" x)
-             0))
-          ((板移転) =>
-           (lambda (x)
-             (log-format "get-2ch-subject ~a" x)
-             1))
-          ((板消失 失敗) =>
-           (lambda (x)
-             (log-format "get-2ch-subject error: ~a" x)
-             1))
-          (else 1)))
+        (let1 r (get-2ch-subject subject)
+          (log-format "get-2ch-subject ~a" r)
+          (exit-code r)))
        (dat
-        (case (get-2ch-dat dat)
-          ((成功 更新無し) =>
-           (lambda (x)
-             (log-format "get-2ch-dat ~a" x)
-             0))
-          ((失敗 あぼーん 移転 スレ消失) =>
-           (lambda (x)
-             (log-format "get-2ch-dat error: ~a" x)
-             1))
-          (else 1)))
+        (let1 r (get-2ch-dat dat)
+          (log-format "get-2ch-dat ~a" r)
+          (exit-code r)))
        (init
         (create-directory* path-dat #o755)
         (create-directory* path-log #o755)

@@ -26,9 +26,7 @@
           distribute-path
           ktkr2-log-open
           cache?
-          href-bbsmenu
-          href-subject
-          href-dat
+          exit-code
           decompose-板URL
           extract-スレキー
           スレの勢い
@@ -87,14 +85,27 @@
 
 (define cache? (make-parameter #f))
 
-(define (href-bbsmenu)
-  (string-append "./bbsmenu.cgi" (if (cache?) "?cache=1" "")))
-
-(define (href-subject 板id)
-  (string-append "./subject.cgi?q=" (x->string 板id) (if (cache?) "&cache=1" "")))
-
-(define (href-dat スレid)
-  (string-append "./dat.cgi?q=" (x->string スレid) (if (cache?) "&cache=1" "")))
+(define (exit-code obj)
+  (case obj
+    ((成功 #t) 0)
+    ((失敗 #f) 1)
+    ((更新無し) 2)
+    ((板移転) 3)
+    ((板消失) 4)
+    ((人大杉) 5)
+    ((スレ移転) 6)
+    ((スレ消失) 7)
+    ((あぼーん) 8)
+    ((0) '成功)
+    ((1) '失敗)
+    ((2) '更新無し)
+    ((3) '板移転)
+    ((4) '板消失)
+    ((5) '人大杉)
+    ((6) 'スレ移転)
+    ((7) 'スレ消失)
+    ((8) 'あぼーん)
+    (else 1)))
 
 (define (decompose-板URL 板URL)
   (receive (_ _ host _ path _ _) (uri-parse 板URL)

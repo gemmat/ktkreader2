@@ -17,7 +17,21 @@
   (or (cache?)
       (and-let* ((process (run-process `(gosh main.scm ,(string-append "--subject=" 板URL))))
                  ((process-wait process)))
-        (zero? (process-exit-status process)))))
+        (exit-code (process-exit-status process)))))
+
+(define (response type 板id 板名 板URL data)
+  `(ktkreader2
+    (@ (type ,type))
+    (board
+     (id ,板id)
+     (title ,板名)
+     ,@(receive (host path) (decompose-板URL 板URL)
+         (if (and host path)
+           `((host ,host)
+             (path ,path))
+           '()))
+     (url ,板URL)
+     ,data)))
 
 (define (main args)
   (cgi-main
@@ -27,19 +41,11 @@
                     (p (db-select-板URL&板名 板id))
                     (板URL (car p))
                     (板名  (cdr p)))
-           (if (update-subject 板URL)
-             `(ktkreader2
-               (@ (type "result"))
-               (board
-                (id ,板id)
-                (title ,板名)
-                ,@(receive (host path) (decompose-板URL 板URL)
-                    (if (and host path)
-                      `((host ,host)
-                        (path ,path))
-                      '()))
-                (url ,板URL)
-                (subjects
+           (case (update-subject 板URL)
+             ((成功 更新無し #t)
+              (response
+               "result" 板id 板名 板URL
+               `(subjects
                  ,@(map (match-lambda
                          ((スレid スレURL スレタイ レス数 スレファイル)
                           (let1 スレキー (extract-スレキー スレURL)
@@ -53,7 +59,24 @@
                         (or (and-let* ((word (cgi-get-parameter "ss" params :default #f :convert (cut uri-decode-string <> :cgi-decode #t))))
                               (db-select-スレid&スレURL&スレタイ&レス数&スレファイル-where-板id-スレタイ-glob 板id word))
                             (db-select-スレid&スレURL&スレタイ&レス数&スレファイル 板id))))))
-             "502"))
+             ((板移転)
+              (response
+               "error" 板id 板名 板URL
+               `(subjects
+                 (subject
+                  (title "板が移転しました。F5リロードすると直るかも。")))))
+             ((板消失)
+              (response
+               "error" 板id 板名 板URL
+               `(subjects
+                 (subject
+                  (title "板が消えたようです。")))))
+             (else
+              (response
+               "error" 板id 板名 板URL
+               `(subjects
+                 (subject
+                  (title "エラー。ご迷惑をおかけして申し訳ありません。")))))))
          "503"))
    :output-proc cgi-output-sxml->xml
    :on-error cgi-on-error

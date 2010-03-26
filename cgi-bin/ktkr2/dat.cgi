@@ -17,7 +17,44 @@
   (or (cache?)
       (and-let* ((process (run-process `(gosh main.scm ,(string-append "--dat=" スレURL))))
                  ((process-wait process)))
-        (zero? (process-exit-status process)))))
+        (exit-code (process-exit-status process)))))
+
+(define (load-data スレid format sort?)
+  (and-let* ((スレファイル (db-select-スレファイル-is-not-null スレid))
+             (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS)))
+    (case format
+      ((xml)
+       (if sort?
+         (sort-res (xml-formatter source))
+         (xml-formatter source)))
+      ((html)
+       (html-formatter
+        (if sort?
+          (sort-res (xml-formatter source))
+          (xml-formatter source))))
+      (else
+       `(dat ,source))
+      )))
+
+(define (response type 板id 板名 板URL スレid スレタイ レス数 スレURL data)
+  `(ktkreader2
+    (@ (type ,type))
+    (board
+     (id ,板id)
+     (title ,板名)
+     ,@(receive (host path) (decompose-板URL 板URL)
+         (if (and host path)
+           `((host ,host)
+             (path ,path))
+           '()))
+     (url ,板URL)
+     (subject
+      (id ,スレid)
+      (title ,スレタイ)
+      (rescount ,レス数)
+      (url ,スレURL)
+      (key ,(extract-スレキー スレURL))
+      ,data))))
 
 (define (main args)
   (cgi-main
@@ -32,45 +69,21 @@
                     (p (db-select-板URL&板名 板id))
                     (板URL (car p))
                     (板名  (cdr p)))
-           `(ktkreader2
-             (@ (type "result"))
-             (board
-              (id ,板id)
-              (title ,板名)
-              ,@(receive (host path) (decompose-板URL 板URL)
-                  (if (and host path)
-                    `((host ,host)
-                      (path ,path))
-                    '()))
-              (url ,板URL)
-              (subject
-               (id ,スレid)
-               (title ,スレタイ)
-               (rescount ,レス数)
-               (url ,スレURL)
-               (key ,(extract-スレキー スレURL))
-               ,(if (update-dat スレURL)
-                  (or (and-let* ((スレファイル (db-select-スレファイル-is-not-null スレid))
-                                 (source (call-with-input-file スレファイル port->string :encoding 'SHIFT_JIS))
-                                 (fmt    (cgi-get-parameter "format" params :default 'html :convert string->symbol))
-                                 (srt    (cgi-get-parameter "sort"   params :default 0     :convert x->integer)))
-                        (case fmt
-                          ((xml)
-                           (if (positive? srt)
-                             (sort-res (xml-formatter source))
-                             (xml-formatter source)))
-                          ((html)
-                           (html-formatter
-                            (if (positive? srt)
-                              (sort-res (xml-formatter source))
-                              (xml-formatter source))))
-                          ((dat)
-                           `(dat ,source))
-                          (else
-                           `(dat ,source))
-                          ))
-                      `(dat "cache-miss"))
-                  `(dat "error"))))))
+           (case (update-dat スレURL)
+             ((成功 更新無し #t)
+              (let ((format (cgi-get-parameter "format" params :default 'html :convert string->symbol))
+                    (sort?  (cgi-get-parameter "sort"   params :default #f     :convert (compose positive? x->integer))))
+                (or (and-let* ((data (load-data スレid format sort?)))
+                      (response "result" 板id 板名 板URL スレid スレタイ レス数 スレURL data))
+                    (response "error" 板id 板名 板URL スレid スレタイ レス数 スレURL `(dat "ｷｬｯｼｭがありませんでした。")))))
+             ((人大杉)
+              (response "error" 板id 板名 板URL スレid スレタイ レス数 スレURL `(dat "人大杉")))
+             ((スレ移転)
+              (response "error" 板id 板名 板URL スレid スレタイ レス数 スレURL `(dat "スレが移転しました。")))
+             ((スレ消失)
+              (response "error" 板id 板名 板URL スレid スレタイ レス数 スレURL `(dat "スレが消えたようです。")))
+             (else
+              (response "error" 板id 板名 板URL スレid スレタイ レス数 スレURL `(dat "dat落ち")))))
          "501"))
    :output-proc cgi-output-sxml->xml
    :on-error cgi-on-error
