@@ -1,0 +1,153 @@
+/* 記事全体 */
+.main {
+    -x-system-font:none;
+    color:#660000;
+    font-family:"ＭＳ Ｐゴシック";
+    font-size:13px;
+    font-size-adjust:none;
+    font-stretch:normal;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:normal;
+    line-height:110%;
+    text-align:left;
+}
+
+/* レスした人の名前のところ。うすいグリーン。 */
+.nm {
+    color:#008000;
+    line-height:1.3;
+    text-align:left;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+/* 黒 */
+.rr {
+    color:#000000;
+    font-size:14px;
+    font-weight:bold;
+    line-height:160%;
+    margin:0 0 50px 20px;
+    padding-right:100px;
+    text-align:left;
+}
+
+/* 赤 */
+.r1 {
+    color:#DC143C;
+    font-size:14px;
+    font-weight:bold;
+    line-height:160%;
+    margin:0 0 0px 20px;
+    padding-right:100px;
+    text-align:left;
+}
+
+/* 青 */
+.r2 {
+    color:#6A5ACD;
+    font-size:14px;
+    font-weight:bold;
+    line-height:160%;
+    margin:0 0 50px 20px;
+    padding-right:100px;
+    text-align:left;
+}
+
+/* 赤大 */
+.r3 {
+    color:#DC143C;
+    font-size:16px;
+    font-weight:bold;
+    line-height:160%;
+    margin:0 0 0px 20px;
+    padding-right:100px;
+    text-align:left;
+}
+
+/* 青大 */
+.r4 {
+    color:#6A5ACD;
+    font-size:16px;
+    font-weight:bold;
+    line-height:160%;
+    margin:0 0 50px 20px;
+    padding-right:100px;
+    text-align:left;
+}
+
+/* 黒AA */
+.aa {
+    -x-system-font:none;
+    color:#000000;
+    font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";
+    font-size:10px;
+    font-size-adjust:none;
+    font-stretch:normal;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:normal;
+    line-height:1em;
+    margin:0 0 50px 20px;
+}
+
+/* 赤AA */
+.a1 {
+    -x-system-font:none;
+    color:#DC143C;
+    font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";
+    font-size:12px;
+    font-size-adjust:none;
+    font-stretch:normal;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:normal;
+    line-height:1em;
+    margin:0 0 0px 20px;
+}
+
+/* 青AA */
+.a2 {
+    -x-system-font:none;
+    color:#6A5ACD;
+    font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";
+    font-size:12px;
+    font-size-adjust:none;
+    font-stretch:normal;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:normal;
+    line-height:1em;
+    margin:0 0 50px 20px;
+}
+
+/* 赤大AA */
+.a3 {
+    -x-system-font:none;
+    color:#DC143C;
+    font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";
+    font-size:16px;
+    font-size-adjust:none;
+    font-stretch:normal;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:normal;
+    line-height:1em;
+    margin:0 0 10px 20px;
+}
+
+/* 青大AA */
+.a4 {
+    -x-system-font:none;
+    color:#6A5ACD;
+    font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";
+    font-size:16px;
+    font-size-adjust:none;
+    font-stretch:normal;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:normal;
+    line-height:1em;
+    margin:0 0 10px 20px;
+}

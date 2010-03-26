@@ -130,7 +130,7 @@
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((glob (string-append "*" word "*"))
-            (result (dbi-do conn "SELECT id, 板URL, 板名, 板最終更新日時 FROM bbsmenu WHERE 板名 GLOB ?" '() glob))
+            (result (dbi-do conn "SELECT id, 板URL, 板名, 板最終更新日時 FROM bbsmenu WHERE 板名 GLOB ? LIMIT 1000" '() glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)
@@ -379,7 +379,7 @@
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((glob (string-append "*" word "*"))
-            (result (dbi-do conn "SELECT id, 板id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE スレタイ GLOB ?" '() glob))
+            (result (dbi-do conn "SELECT id, 板id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE スレタイ GLOB ? LIMIT 1000" '() glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)
@@ -397,7 +397,7 @@
   (call-with-ktkr2-db
    (lambda (conn)
      (let* ((glob (string-append "*" word "*"))
-            (result (dbi-do conn "SELECT id, 板id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE スレURL GLOB ?" '() glob))
+            (result (dbi-do conn "SELECT id, 板id, スレURL, スレタイ, レス数, スレファイル FROM subject WHERE スレURL GLOB ? LIMIT 1000" '() glob))
             (getter (relation-accessor result)))
        (begin0
          (map (lambda (row)

@@ -117,20 +117,7 @@ function revert() {
 
 function output() {
   var nodes = Dom.getChildren(Dom.getFirstChild('content'));
-  var arr = [
-    '<style>.main {-x-system-font:none;color:#660000;font-family:"ＭＳ Ｐゴシック";font-size:13px;font-size-adjust:none;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:normal;line-height:110%;text-align:left;}',
-    '.nm {color:#008000;line-height:1.3;text-align:left;margin-left: 5px;margin-right: 5px;}',
-    '.rr {color:#000000;font-size:14px;font-weight:bold;line-height:160%;margin:0 0 50px 20px;padding-right:100px;text-align:left;}',
-    '.r1 {color:#DC143C;font-size:14px;font-weight:bold;line-height:160%;margin:0 0 0px 20px;padding-right:100px;text-align:left;}',
-    '.r2 {color:#6A5ACD;font-size:14px;font-weight:bold;line-height:160%;margin:0 0 50px 20px;padding-right:100px;text-align:left;}',
-    '.r3 {color:#DC143C;font-size:16px;font-weight:bold;line-height:160%;margin:0 0 0px 20px;padding-right:100px;text-align:left;}',
-    '.r4 {color:#6A5ACD;font-size:16px;font-weight:bold;line-height:160%;margin:0 0 50px 20px;padding-right:100px;text-align:left;}',
-    '.aa {-x-system-font:none;color:#000000;font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";font-size:10px;font-size-adjust:none;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:normal;line-height:1em;margin:0 0 50px 20px;}',
-    '.a1 {-x-system-font:none;color:#DC143C;font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";font-size:12px;font-size-adjust:none;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:normal;line-height:1em;margin:0 0 0px 20px;}',
-    '.a2 {-x-system-font:none;color:#6A5ACD;font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";font-size:12px;font-size-adjust:none;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:normal;line-height:1em;margin:0 0 50px 20px;}',
-    '.a3 {-x-system-font:none;color:#DC143C;font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";font-size:16px;font-size-adjust:none;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:normal;line-height:1em;margin:0 0 10px 20px;}',
-    '.a4 {-x-system-font:none;color:#6A5ACD;font-family:"Mona","mona-gothic-jisx0208.1990-0","ＭＳ Ｐゴシック";font-size:16px;font-size-adjust:none;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:normal;line-height:1em;margin:0 0 10px 20px;}</style>\n\n',
-    '<div class="main">'];
+  var arr = [];
   for (var i = 0, len = nodes.length; i < len; i++) {
     var res = nodes[i];
     var res_header  = res.firstChild;
@@ -138,13 +125,11 @@ function output() {
     var res_content_body = res_content.firstChild;
     var res_content_body_class = Dom.getAttribute(res_content_body, 'class');
     if (res_content_body_class == 'del') continue;
-    arr.push(res_header.innerHTML);
-    arr.push('<br/>');
+    arr.push(res_header.innerHTML + '<br/>');
     arr.push('<div class="' + res_content_body_class + '">');
     arr.push(res_content_body.innerHTML);
     arr.push('</div>');
   }
-  arr.push('</div>');
   Dom.get('output-textarea').value = arr.join('\n');
   Dom.setStyle('output-container', 'display', '');
 }
