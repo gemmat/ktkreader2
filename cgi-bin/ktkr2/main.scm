@@ -47,9 +47,9 @@
      ((string=? status "304")
       '更新無し)
      ((string=? status "404")
-      (or (and-let* ((板移転URL (get-2ch-板移転 板URL)))
-            (get-2ch-subject 板移転URL))
-          '板消失))
+      (if (get-2ch-板移転 板URL)
+        '板移転
+        '板消失))
      (else
       '失敗))))
 
@@ -183,9 +183,14 @@
   (let1 result (helper 板URL 0)
     (cond
      ((string? result)
-      (log-format "get-2ch-板移転 src: ~a dst: ~a" 板URL result)
-      (db-update-板URL 板URL result)
-      result)
+      (if (string=? 板URL result)
+        (begin
+          (log-format "get-2ch-板移転 src==dst: ~a" result)
+          #f)
+        (begin
+          (log-format "get-2ch-板移転 src: ~a dst: ~a" 板URL result)
+          (db-update-板URL 板URL result)
+          #t)))
      (else
       (log-format "get-2ch-板移転 ~a" result)
       (and-let* ((板id (db-select-板id 板URL))
@@ -229,6 +234,10 @@
            (lambda (x)
              (log-format "get-2ch-subject ~a" x)
              0))
+          ((板移転) =>
+           (lambda (x)
+             (log-format "get-2ch-subject ~a" x)
+             1))
           ((板消失 失敗) =>
            (lambda (x)
              (log-format "get-2ch-subject error: ~a" x)
@@ -255,12 +264,12 @@
         (log-format "initialized.")
         0)
        (cron
-        ;; */1 * * * * /usr/local/bin/gosh -I/home/teruaki/public_html/cgi-bin/ktkr2/ /home/teruaki/public_html/cgi-bin/ktkr2/main.scm --cron >/dev/null 2>$1
+        ;; */1 * * * * /usr/local/bin/gosh -I/home/teruaki/public_html/cgi-bin/ktkr2/ /home/teruaki/public_html/cgi-bin/ktkr2/main.scm --cron >/dev/null 2>&1
         (let1 cron-板id (call-with-input-file path-cron read)
           (log-format "cron ~a" cron-板id)
+          (call-with-output-file path-cron (cut write (+ cron-板id 1) <>))
           (and-let* ((板URL (db-select-板URL (modulo cron-板id 830))))
-            (get-2ch-subject 板URL))
-          (call-with-output-file path-cron (cut write (+ cron-板id 1) <>)))
+            (get-2ch-subject 板URL)))
         0)
        (else
         (usage)
